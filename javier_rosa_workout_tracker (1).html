@@ -1,0 +1,1982 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Javier Rosa - Workout Tracker & Log</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#fef2f2',
+              100: '#fee2e2',
+              300: '#fecaca',
+              400: '#fca5a5',
+              500: '#f87171',
+              600: '#ef5f5f',
+              700: '#dc4444'
+            },
+            gym: {
+              base: '#0b0f17',
+              surface: '#111827',
+              card: '#182234',
+              border: '#243049',
+              light: '#f8fafc',
+              lightCard: '#ffffff'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    /* Mobile-first touch interactions */
+    * {
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { 
+      -webkit-appearance: none; 
+      margin: 0; 
+    }
+    input[type=number] {
+      -moz-appearance: textfield;
+    }
+    .custom-scroll::-webkit-scrollbar {
+      height: 4px;
+      width: 4px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 9999px;
+    }
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.05); opacity: 0.4; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+    .timer-active-pulse {
+      animation: pulse-ring 2s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-gym-base text-slate-100 min-h-screen flex flex-col font-sans pb-28 md:pb-12 antialiased selection:bg-brand-500 selection:text-white">
+
+  <!-- ================= TOP HEADER ================= -->
+  <header class="sticky top-0 z-40 bg-gym-surface/90 backdrop-blur-md border-b border-gym-border px-4 py-3">
+    <div class="max-w-4xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-lg bg-gradient-to-tr from-brand-600 to-rose-300 flex items-center justify-center shadow-lg shadow-brand-600/30 font-black text-black text-xl tracking-tighter">
+          JR
+        </div>
+        <div>
+          <h1 class="text-sm md:text-base font-extrabold uppercase tracking-wider text-white flex items-center gap-1.5">
+            Javier Rosa <span class="text-[10px] bg-brand-500/20 text-brand-400 border border-brand-500/30 px-1.5 py-0.5 rounded font-mono font-bold">8 WEEKS</span>
+          </h1>
+          <p class="text-[11px] text-slate-400 font-medium" data-i18n="headerSubtitle">Registro de Entrenamiento Diario</p>
+        </div>
+      </div>
+
+      <!-- Action Utilities -->
+      <div class="flex items-center gap-2">
+        <!-- Language Toggle -->
+        <button id="langToggleBtn" onclick="toggleLanguage()" class="flex items-center gap-1 bg-gym-card hover:bg-gym-border text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gym-border transition" title="English / Español">
+          <i data-lucide="languages" class="w-3.5 h-3.5 text-slate-400"></i>
+          <span id="langIndicator" class="text-brand-400 font-bold">EN</span>
+        </button>
+
+        <!-- Unit Toggle -->
+        <button id="unitToggleBtn" onclick="toggleUnit()" class="flex items-center gap-1 bg-gym-card hover:bg-gym-border text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gym-border transition">
+          <span id="unitIndicator" class="text-brand-400 font-bold">KG</span>
+          <i data-lucide="repeat" class="w-3.5 h-3.5 text-slate-400"></i>
+        </button>
+
+        <!-- Backup & Settings Modal Button -->
+        <button onclick="openSettingsModal()" class="p-1.5 text-slate-300 hover:text-white bg-gym-card hover:bg-gym-border rounded-lg border border-gym-border transition" title="Copia de Seguridad y Datos" data-i18n-title="backupAndData">
+          <i data-lucide="settings" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= FLOATING REST TIMER BAR ================= -->
+  <div id="restTimerBar" class="fixed top-[57px] left-0 right-0 z-30 bg-gym-surface border-b border-brand-500/40 px-4 py-2 shadow-xl transition-all duration-300 transform -translate-y-full opacity-0 pointer-events-none">
+    <div class="max-w-4xl mx-auto flex items-center justify-between gap-3">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-full bg-brand-500/20 text-brand-400 flex items-center justify-center timer-active-pulse">
+          <i data-lucide="timer" class="w-4 h-4"></i>
+        </div>
+        <div>
+          <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider" data-i18n="restTime">Tiempo de Descanso</div>
+          <div id="timerDisplay" class="text-lg font-mono font-black text-brand-400 leading-none">00:45</div>
+        </div>
+      </div>
+
+      <!-- Progress bar -->
+      <div class="flex-1 max-w-xs h-2 bg-gym-card rounded-full overflow-hidden border border-gym-border">
+        <div id="timerProgressBar" class="h-full bg-gradient-to-r from-rose-300 to-brand-500 transition-all duration-300" style="width: 100%;"></div>
+      </div>
+
+      <div class="flex items-center gap-1.5">
+        <button onclick="addTimerSeconds(15)" class="px-2 py-1 text-xs bg-gym-card hover:bg-gym-border rounded font-mono font-medium text-slate-300">+15s</button>
+        <button onclick="stopTimer()" class="p-1 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded" title="Detener" data-i18n-title="stop">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MAIN CONTENT TABS ================= -->
+  <main class="flex-1 max-w-4xl w-full mx-auto p-3.5 md:p-6 space-y-5">
+
+    <!-- NAVIGATION TABS -->
+    <div class="flex bg-gym-surface p-1 rounded-xl border border-gym-border">
+      <button id="tabWorkoutBtn" onclick="switchMainTab('workout')" class="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs md:text-sm font-bold transition bg-brand-600 text-white shadow">
+        <i data-lucide="dumbbell" class="w-4 h-4"></i>
+        <span data-i18n="tabWorkout">Entrenamiento</span>
+      </button>
+      <button id="tabHistoryBtn" onclick="switchMainTab('history')" class="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs md:text-sm font-bold transition text-slate-400 hover:text-white">
+        <i data-lucide="history" class="w-4 h-4"></i>
+        <span data-i18n="tabHistory">Historial &amp; Récords</span>
+      </button>
+      <button id="tabPlanInfoBtn" onclick="switchMainTab('info')" class="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs md:text-sm font-bold transition text-slate-400 hover:text-white">
+        <i data-lucide="book-open" class="w-4 h-4"></i>
+        <span data-i18n="tabMethod">Metodología</span>
+      </button>
+    </div>
+
+    <!-- ================= VIEW 1: WORKOUT LOGGING ================= -->
+    <div id="viewWorkout" class="space-y-4">
+      
+      <!-- Week Selector (Horizontal Scroll) -->
+      <div class="bg-gym-surface p-3 rounded-xl border border-gym-border space-y-2">
+        <div class="flex items-center justify-between text-xs">
+          <span class="text-slate-400 uppercase font-bold tracking-wider flex items-center gap-1.5">
+            <i data-lucide="calendar" class="w-3.5 h-3.5 text-brand-400"></i> <span data-i18n="planWeek">Semana del Plan</span>
+          </span>
+          <span id="phaseTag" class="text-[10px] px-2 py-0.5 rounded font-bold uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20">
+            Fase 1: Hipertrofia (8-15 Reps)
+          </span>
+        </div>
+        
+        <div class="flex items-center gap-2 overflow-x-auto pb-1 custom-scroll" id="weekListContainer">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Day Selector (1 to 5) -->
+      <div class="grid grid-cols-5 gap-1.5 bg-gym-surface p-2 rounded-xl border border-gym-border" id="dayButtonsContainer">
+        <!-- Populated by JS -->
+      </div>
+
+      <!-- Current Session Header & Summary -->
+      <div class="bg-gradient-to-r from-gym-surface to-gym-card p-4 rounded-xl border border-gym-border flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-2">
+            <span id="sessionTagTitle" class="text-xs font-mono font-bold text-brand-400 uppercase tracking-wide">Semana 1 • Día 1</span>
+            <span id="sessionDayFocus" class="text-xs bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full border border-slate-700">Torso &amp; Brazos</span>
+          </div>
+          <h2 id="sessionHeadline" class="text-base md:text-lg font-extrabold text-white mt-0.5">Rutina Oficial de Javier Rosa</h2>
+        </div>
+
+        <!-- Quick Routine Stats -->
+        <div class="flex items-center gap-4 text-xs">
+          <div class="bg-gym-base/60 px-3 py-1.5 rounded-lg border border-gym-border">
+            <span class="text-slate-400 block text-[10px] uppercase font-bold" data-i18n="exercises">Ejercicios</span>
+            <span id="statsExercisesCount" class="font-bold text-white text-sm">7</span>
+          </div>
+          <div class="bg-gym-base/60 px-3 py-1.5 rounded-lg border border-gym-border">
+            <span class="text-slate-400 block text-[10px] uppercase font-bold" data-i18n="completed">Completados</span>
+            <span id="statsCompletedSets" class="font-bold text-brand-400 text-sm">0 / 28</span>
+          </div>
+          <button onclick="finishAndSaveWorkout()" class="ml-auto bg-brand-600 hover:bg-brand-500 text-white font-bold px-3 py-2 rounded-lg text-xs shadow-lg shadow-brand-600/30 flex items-center gap-1.5 transition">
+            <i data-lucide="check-circle" class="w-4 h-4"></i>
+            <span data-i18n="saveSession">Guardar Sesión</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Dynamic Exercises List Container -->
+      <div id="exerciseListContainer" class="space-y-4">
+        <!-- Injected dynamically -->
+      </div>
+
+      <!-- End of list CTA -->
+      <div class="pt-2 pb-6 text-center">
+        <button onclick="finishAndSaveWorkout()" class="w-full py-3.5 bg-gradient-to-r from-brand-600 to-rose-400 hover:from-brand-500 hover:to-rose-300 text-white font-black text-sm uppercase tracking-wider rounded-xl shadow-lg shadow-brand-600/30 flex items-center justify-center gap-2 transition active:scale-[0.99]">
+          <i data-lucide="trophy" class="w-5 h-5"></i>
+          <span data-i18n="completeAndSave">Completar y Guardar Sesión</span>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- ================= VIEW 2: HISTORY & PROGRESS ================= -->
+    <div id="viewHistory" class="space-y-4 hidden">
+      
+      <!-- Top Metrics -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        <div class="bg-gym-surface p-3.5 rounded-xl border border-gym-border">
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block" data-i18n="metricSessions">Sesiones Realizadas</span>
+          <span id="metricTotalWorkouts" class="text-xl font-black text-white mt-1 block">0</span>
+        </div>
+        <div class="bg-gym-surface p-3.5 rounded-xl border border-gym-border">
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block" data-i18n="metricSets">Series Completadas</span>
+          <span id="metricTotalSets" class="text-xl font-black text-brand-400 mt-1 block">0</span>
+        </div>
+        <div class="bg-gym-surface p-3.5 rounded-xl border border-gym-border">
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block" data-i18n="metricVolume">Volumen Acumulado</span>
+          <span id="metricTotalVolume" class="text-xl font-black text-amber-400 mt-1 block">0 kg</span>
+        </div>
+        <div class="bg-gym-surface p-3.5 rounded-xl border border-gym-border">
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block" data-i18n="metricPRs">Ejercicios Récord</span>
+          <span id="metricTotalPRs" class="text-xl font-black text-emerald-400 mt-1 block">0</span>
+        </div>
+      </div>
+
+      <!-- Personal Records (PRs) Table -->
+      <div class="bg-gym-surface p-4 rounded-xl border border-gym-border space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
+            <i data-lucide="flame" class="w-4 h-4 text-amber-500"></i> <span data-i18n="prTitle">Récords Personales (Carga Máxima Lograda)</span>
+          </h3>
+          <span class="text-[11px] text-slate-400" data-i18n="updatedRealtime">Actualizado en tiempo real</span>
+        </div>
+        <div class="overflow-x-auto custom-scroll">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr class="border-b border-gym-border text-slate-400 uppercase text-[10px]">
+                <th class="py-2 px-3" data-i18n="thExercise">Ejercicio</th>
+                <th class="py-2 px-3" data-i18n="thMaxWeight">Peso Máximo</th>
+                <th class="py-2 px-3" data-i18n="thReps">Reps Logradas</th>
+                <th class="py-2 px-3" data-i18n="thEst1RM">1RM Estimado</th>
+                <th class="py-2 px-3" data-i18n="thDate">Fecha</th>
+              </tr>
+            </thead>
+            <tbody id="prTableBody" class="divide-y divide-gym-border text-slate-300">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Past Completed Workouts Log -->
+      <div class="bg-gym-surface p-4 rounded-xl border border-gym-border space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
+            <i data-lucide="list-checks" class="w-4 h-4 text-brand-400"></i> <span data-i18n="historyLogTitle">Bitácora de Sesiones Guardadas</span>
+          </h3>
+          <button onclick="clearHistoryConfirm()" class="text-[10px] text-red-400 hover:text-red-300 flex items-center gap-1 font-semibold">
+            <i data-lucide="trash-2" class="w-3 h-3"></i> <span data-i18n="clearAll">Borrar Todo</span>
+          </button>
+        </div>
+        <div id="historyLogList" class="space-y-3">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ================= VIEW 3: METHODOLOGY INFO ================= -->
+    <div id="viewInfo" class="space-y-4 hidden">
+      <div class="bg-gym-surface p-4 md:p-5 rounded-xl border border-gym-border space-y-3">
+        <div class="flex items-center gap-2 text-brand-400 font-bold text-xs uppercase tracking-wider">
+          <i data-lucide="info" class="w-4 h-4"></i> <span data-i18n="guidelinesTag">Directrices de Javier Rosa</span>
+        </div>
+        <h3 class="text-base font-extrabold text-white" data-i18n="rulesTitle">Reglas Fundamentales del Programa de 8 Semanas</h3>
+        <p class="text-xs text-slate-300 leading-relaxed" data-i18n="rulesIntro">
+          Esta rutina está diseñada sobre un bloque semanal de 5 días de entrenamiento y 2 días de descanso. Puedes comenzar cualquier día y entrenar seguido o alternado. Lo crucial es completar los 5 días en el ciclo y respetar la técnica estricta sobre el peso levantado.
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
+          <div class="p-3 bg-gym-card rounded-lg border border-gym-border space-y-1">
+            <span class="text-xs font-bold text-white flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-blue-500"></span> <span data-i18n="normalSet">Set Normal</span>
+            </span>
+            <p class="text-[11px] text-slate-300" data-i18n="normalSetDesc">
+              Ritmo controlado y técnica óptima. Carga moderada que exija esfuerzo real (RPE 7-8) sin llegar a la deformación técnica.
+            </p>
+          </div>
+
+          <div class="p-3 bg-gym-card rounded-lg border border-gym-border space-y-1">
+            <span class="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-amber-500"></span> <span data-i18n="pyramidSet">Serie Piramidal</span>
+            </span>
+            <p class="text-[11px] text-slate-300" data-i18n="pyramidSetDesc">
+              Se inicia con más repeticiones y menor peso; en cada serie se incrementa la carga reduciendo las repeticiones (ej. 20→15→12→10→8 o 15→12→10→8→6).
+            </p>
+          </div>
+
+          <div class="p-3 bg-gym-card rounded-lg border border-gym-border space-y-1">
+            <span class="text-xs font-bold text-red-400 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-red-500"></span> <span data-i18n="dropSet">Drop Set Descendente</span>
+            </span>
+            <p class="text-[11px] text-slate-300" data-i18n="dropSetDesc">
+              En la última serie, realizar repeticiones hasta el fallo muscular, bajar inmediatamente 20-30% del peso y continuar sin descanso hasta el fallo.
+            </p>
+          </div>
+        </div>
+
+        <div class="p-3 bg-brand-500/10 border border-brand-500/20 rounded-lg flex items-center justify-between text-xs mt-3">
+          <span class="text-slate-300" data-i18n="supportQuestion">¿Dudas con la técnica o molestias articulares?</span>
+          <a href="mailto:apoyo@lennylopeztrainer.com" class="text-brand-400 font-bold hover:underline">apoyo@lennylopeztrainer.com</a>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ================= SETTINGS / BACKUP MODAL ================= -->
+  <div id="settingsModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-gym-surface border border-gym-border max-w-md w-full rounded-2xl p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-gym-border pb-3">
+        <h3 class="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
+          <i data-lucide="database" class="w-4 h-4 text-brand-400"></i> <span data-i18n="backupAndData">Copia de Seguridad &amp; Datos</span>
+        </h3>
+        <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <p class="text-slate-300" data-i18n="backupIntro">
+          Tus registros de series, pesos y notas se guardan de forma local en tu navegador. Puedes exportar o restaurar una copia de seguridad en archivo JSON cuando quieras.
+        </p>
+
+        <div class="space-y-2">
+          <button onclick="exportDataJSON()" class="w-full py-2.5 bg-gym-card hover:bg-gym-border text-white font-bold rounded-lg border border-gym-border flex items-center justify-center gap-2 transition">
+            <i data-lucide="download" class="w-4 h-4 text-emerald-400"></i>
+            <span data-i18n="exportBackup">Exportar Copia de Seguridad (JSON)</span>
+          </button>
+
+          <label class="w-full py-2.5 bg-gym-card hover:bg-gym-border text-white font-bold rounded-lg border border-gym-border flex items-center justify-center gap-2 transition cursor-pointer">
+            <i data-lucide="upload" class="w-4 h-4 text-amber-400"></i>
+            <span data-i18n="importBackup">Importar Copia de Seguridad</span>
+            <input type="file" id="importFileInput" accept=".json" class="hidden" onchange="importDataJSON(event)">
+          </label>
+        </div>
+
+        <div class="border-t border-gym-border pt-3">
+          <button onclick="resetCurrentSessionData()" class="w-full py-2 text-slate-400 hover:text-red-400 text-xs font-semibold flex items-center justify-center gap-1.5 transition">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+            <span data-i18n="resetDay">Limpiar series del día actual</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom Alert Toast -->
+  <div id="toastMessage" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-brand-600 text-white font-bold text-xs py-2 px-4 rounded-xl shadow-xl transition-all duration-300 opacity-0 pointer-events-none flex items-center gap-2">
+    <i data-lucide="check" class="w-4 h-4"></i>
+    <span id="toastText">Mensaje</span>
+  </div>
+
+  <!-- ================= JAVASCRIPT APPLICATION LOGIC ================= -->
+  <script>
+    /* ==========================================================
+       PROGRAM DATA (Javier Rosa 8-Week Blueprint, Weeks 1-8, Days 1-5)
+       ========================================================== */
+    const PROGRAM_DATA = {
+      // ----------------- FASE 1: SEMANAS 1 A 4 -----------------
+      1: {
+        focus: "Fase 1: Hipertrofia & Base",
+        days: {
+          1: {
+            title: "Torso (Espalda, Pecho, Hombro & Brazos)",
+            exercises: [
+              { name: "Chin-Ups", muscle: "Espalda", type: "Normal", reps: "8-12", sets: 4, rest: 90 },
+              { name: "Underhand Dumbbell Bent Over Row", muscle: "Espalda", type: "Piramidal", reps: "20/15/12/10/8", sets: 5, rest: 45 },
+              { name: "Single-Arm Flat Dumbbell Press", muscle: "Pecho", type: "Piramidal", reps: "20/15/12/10/8", sets: 5, rest: 45 },
+              { name: "Standing Arnold Press", muscle: "Hombros", type: "Normal", reps: "8-12", sets: 4, rest: 90 },
+              { name: "Plyo Push-up", muscle: "Pecho", type: "Normal", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Barbell Preacher Curl", muscle: "Bíceps", type: "Drop Set", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Cable Triceps Kickback", muscle: "Tríceps", type: "Drop Set", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Cardio Session (LISS)", muscle: "Cardio", type: "Normal", reps: "30 Min", sets: 1, rest: 0 }
+            ]
+          },
+          2: {
+            title: "Pierna (Cuádriceps, Femoral) & Core",
+            exercises: [
+              { name: "Goblet squat", muscle: "Cuádriceps", type: "Normal", reps: "8-12", sets: 4, rest: 90 },
+              { name: "Static Lunge", muscle: "Cuádriceps", type: "Normal", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Single-Leg Barbell Romanian Deadlift", muscle: "Femoral", type: "Normal", reps: "8-12", sets: 4, rest: 90 },
+              { name: "Single-Leg Bodyweight Romanian Deadlift", muscle: "Femoral", type: "Piramidal", reps: "20/15/12/10/8", sets: 5, rest: 45 },
+              { name: "Dumbbell Toes-In Calf Raise", muscle: "Gemelos", type: "Drop Set", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Assisted V-Up", muscle: "Abdomen", type: "Normal", reps: "12", sets: 3, rest: 45 },
+              { name: "V-Up", muscle: "Abdomen", type: "Normal", reps: "12", sets: 3, rest: 45 },
+              { name: "Sit-Up", muscle: "Abdomen", type: "Normal", reps: "12", sets: 3, rest: 45 }
+            ]
+          },
+          3: {
+            title: "Hombros, Brazos & Cardio",
+            exercises: [
+              { name: "Barbell Overhead Press", muscle: "Hombros", type: "Normal", reps: "8-12", sets: 4, rest: 90 },
+              { name: "Around the World", muscle: "Hombros", type: "Piramidal", reps: "20/15/12/10/8", sets: 5, rest: 45 },
+              { name: "Walking Overhead Press with Isometric Hold", muscle: "Hombros", type: "Drop Set", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Straight Bar Triceps Pushdown", muscle: "Tríceps", type: "Normal", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Bench Close-Grip Push-Up 1.0", muscle: "Tríceps", type: "Normal", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Dumbbell Biceps Curl", muscle: "Bíceps", type: "Normal", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Seated Dumbbell Biceps Curl", muscle: "Bíceps", type: "Normal", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Cross Crunch", muscle: "Abdomen", type: "Normal", reps: "12", sets: 3, rest: 45 },
+              { name: "Crunch", muscle: "Abdomen", type: "Normal", reps: "12", sets: 3, rest: 45 },
+              { name: "Cardio Session (LISS)", muscle: "Cardio", type: "Normal", reps: "30 Min", sets: 1, rest: 0 }
+            ]
+          },
+          4: {
+            title: "Pecho, Espalda & Brazos",
+            exercises: [
+              { name: "Barbell Bench Press", muscle: "Pecho", type: "Normal", reps: "8-12", sets: 4, rest: 90 },
+              { name: "Cable Cross body punch", muscle: "Pecho", type: "Normal", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Standing Cable Rope Face Pull", muscle: "Espalda", type: "Piramidal", reps: "20/15/12/10/8", sets: 5, rest: 45 },
+              { name: "Shoulder Press Machine (neutral grip)", muscle: "Hombros", type: "Normal", reps: "8-12", sets: 4, rest: 90 },
+              { name: "Renegade Row w/ Push-Up", muscle: "Espalda", type: "Piramidal", reps: "20/15/12/10/8", sets: 5, rest: 45 },
+              { name: "Straight Bar Triceps Pushdown", muscle: "Tríceps", type: "Drop Set", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Standing Barbell Curl", muscle: "Bíceps", type: "Drop Set", reps: "10-15", sets: 4, rest: 60 }
+            ]
+          },
+          5: {
+            title: "Cadena Posterior & Glúteos + Cardio",
+            exercises: [
+              { name: "Barbell Deadlift", muscle: "Femoral", type: "Normal", reps: "8-12", sets: 4, rest: 90 },
+              { name: "Dumbbell Glute Kickback", muscle: "Glúteos", type: "Normal", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Single-Leg Bodyweight Romanian Deadlift", muscle: "Femoral", type: "Piramidal", reps: "20/15/12/10/8", sets: 5, rest: 45 },
+              { name: "Cable pull through", muscle: "Glúteos", type: "Piramidal", reps: "20/15/12/10/8", sets: 5, rest: 45 },
+              { name: "Dumbbell Toes-In Calf Raise", muscle: "Gemelos", type: "Drop Set", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Cardio Session (LISS)", muscle: "Cardio", type: "Normal", reps: "30 Min", sets: 1, rest: 0 }
+            ]
+          }
+        }
+      },
+      2: {
+        focus: "Fase 1: Sobrecarga Progresiva",
+        days: {
+          1: {
+            title: "Espalda, Pecho & Brazos + Cardio",
+            exercises: [
+              { name: "Cable Rope Lat Pushdown", muscle: "Espalda", type: "Normal", reps: "8-12", sets: 4, rest: 90 },
+              { name: "Dumbbell Pullover", muscle: "Espalda", type: "Piramidal", reps: "20/15/12/10/8", sets: 5, rest: 45 },
+              { name: "Incline Dumbbell Chest Press", muscle: "Pecho", type: "Piramidal", reps: "20/15/12/10/8", sets: 5, rest: 45 },
+              { name: "Seated High Incline Dumbbell Shoulder Press", muscle: "Hombros", type: "Normal", reps: "8-12", sets: 4, rest: 90 },
+              { name: "Decline Push-up", muscle: "Pecho", type: "Normal", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Alternating Dumbbell Curl", muscle: "Bíceps", type: "Drop Set", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Machine Dips", muscle: "Tríceps", type: "Drop Set", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Cardio Session", muscle: "Cardio", type: "Normal", reps: "30 Min", sets: 1, rest: 0 }
+            ]
+          },
+          2: {
+            title: "Cuádriceps, Femoral & Abdomen",
+            exercises: [
+              { name: "Step-Up", muscle: "Cuádriceps", type: "Normal", reps: "8-12", sets: 4, rest: 90 },
+              { name: "Cable Side Squats", muscle: "Cuádriceps", type: "Normal", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Leg curl", muscle: "Femoral", type: "Normal", reps: "8-12", sets: 4, rest: 90 },
+              { name: "Single-Leg Stability Ball Leg Curl", muscle: "Femoral", type: "Piramidal", reps: "20/15/12/10/8", sets: 5, rest: 45 },
+              { name: "Dumbbell Calf Raise", muscle: "Gemelos", type: "Drop Set", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Cross Crunch", muscle: "Abdomen", type: "Normal", reps: "12", sets: 3, rest: 45 },
+              { name: "Mountain Climbers", muscle: "Abdomen", type: "Normal", reps: "12", sets: 3, rest: 45 },
+              { name: "Bicycle Crunch", muscle: "Abdomen", type: "Normal", reps: "12", sets: 3, rest: 45 }
+            ]
+          },
+          3: {
+            title: "Hombros, Tríceps & Bíceps + Cardio",
+            exercises: [
+              { name: "Seated High Incline Dumbbell Shoulder Press", muscle: "Hombros", type: "Normal", reps: "8-12", sets: 4, rest: 90 },
+              { name: "Seated Single-Arm Dumbbell Lateral Raise", muscle: "Hombros", type: "Piramidal", reps: "20/15/12/10/8", sets: 5, rest: 45 },
+              { name: "Walking Overhead Press with Isometric Hold", muscle: "Hombros", type: "Drop Set", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Lying Dumbbell Triceps Kickback", muscle: "Tríceps", type: "Normal", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Bench-Supported Triceps Kickback", muscle: "Tríceps", type: "Normal", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Barbell Preacher Curl", muscle: "Bíceps", type: "Normal", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Barbell Reverse Grip Curl", muscle: "Bíceps", type: "Normal", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Cardio Session", muscle: "Cardio", type: "Normal", reps: "30 Min", sets: 1, rest: 0 }
+            ]
+          },
+          4: {
+            title: "Pecho, Espalda & Brazos",
+            exercises: [
+              { name: "Plyo Push-up", muscle: "Pecho", type: "Normal", reps: "8-12", sets: 4, rest: 90 },
+              { name: "Incline Dumbbell Chest Press", muscle: "Pecho", type: "Normal", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Single Arm Cable Row", muscle: "Espalda", type: "Piramidal", reps: "20/15/12/10/8", sets: 5, rest: 45 },
+              { name: "Seated High Incline Dumbbell Shoulder Press", muscle: "Hombros", type: "Normal", reps: "8-12", sets: 4, rest: 90 },
+              { name: "Single Arm Supported Dumbbell Row", muscle: "Espalda", type: "Piramidal", reps: "20/15/12/10/8", sets: 5, rest: 45 },
+              { name: "Smith Machine Skull Crusher", muscle: "Tríceps", type: "Drop Set", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Single Arm Cable Preacher Curl", muscle: "Bíceps", type: "Drop Set", reps: "10-15", sets: 4, rest: 60 }
+            ]
+          },
+          5: {
+            title: "Cadena Posterior & Glúteos + Cardio",
+            exercises: [
+              { name: "Dumbbell Romanian Deadlift", muscle: "Femoral", type: "Normal", reps: "8-12", sets: 4, rest: 90 },
+              { name: "Side crab walk", muscle: "Glúteos", type: "Normal", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Single-Leg Stability Ball Leg Curl", muscle: "Femoral", type: "Piramidal", reps: "20/15/12/10/8", sets: 5, rest: 45 },
+              { name: "Cable Glute Kickback", muscle: "Glúteos", type: "Piramidal", reps: "20/15/12/10/8", sets: 5, rest: 45 },
+              { name: "Dumbbell Calf Raise", muscle: "Gemelos", type: "Drop Set", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Cardio Session", muscle: "Cardio", type: "Normal", reps: "30 Min", sets: 1, rest: 0 }
+            ]
+          }
+        }
+      },
+      3: {
+        focus: "Fase 1: Tensión Mecánica",
+        days: {
+          1: {
+            title: "Torso Pesado & Brazos + Cardio",
+            exercises: [
+              { name: "T-Bar Row", muscle: "Espalda", type: "Normal", reps: "8-12", sets: 4, rest: 90 },
+              { name: "Single Arm Cable Row", muscle: "Espalda", type: "Piramidal", reps: "20/15/12/10/8", sets: 5, rest: 45 },
+              { name: "Flat dumbbell squeeze press", muscle: "Pecho", type: "Piramidal", reps: "20/15/12/10/8", sets: 5, rest: 45 },
+              { name: "Shoulder Press Machine (neutral grip)", muscle: "Hombros", type: "Normal", reps: "8-12", sets: 4, rest: 90 },
+              { name: "Narrow-grip Incline Push-up", muscle: "Pecho", type: "Normal", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Barbell Preacher Curl", muscle: "Bíceps", type: "Drop Set", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Barbell Close-Grip Triceps Press", muscle: "Tríceps", type: "Drop Set", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Cardio Session", muscle: "Cardio", type: "Normal", reps: "30 Min", sets: 1, rest: 0 }
+            ]
+          },
+          2: {
+            title: "Pierna Completa & Core",
+            exercises: [
+              { name: "Walking lunge", muscle: "Cuádriceps", type: "Normal", reps: "8-12", sets: 4, rest: 90 },
+              { name: "Lunge skip", muscle: "Cuádriceps", type: "Normal", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Barbell Good Morning", muscle: "Femoral", type: "Normal", reps: "8-12", sets: 4, rest: 90 },
+              { name: "Single-Leg Bodyweight Romanian Deadlift", muscle: "Femoral", type: "Piramidal", reps: "20/15/12/10/8", sets: 5, rest: 45 },
+              { name: "Toes-Out Calf Raise", muscle: "Gemelos", type: "Drop Set", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Assisted V-Up", muscle: "Abdomen", type: "Normal", reps: "12", sets: 3, rest: 45 },
+              { name: "Sit-Up", muscle: "Abdomen", type: "Normal", reps: "12", sets: 3, rest: 45 },
+              { name: "Crunch", muscle: "Abdomen", type: "Normal", reps: "12", sets: 3, rest: 45 }
+            ]
+          },
+          3: {
+            title: "Hombros, Tríceps & Bíceps + Cardio",
+            exercises: [
+              { name: "Seated Shoulder Press Machine (wide grip)", muscle: "Hombros", type: "Normal", reps: "8-12", sets: 4, rest: 90 },
+              { name: "Seated Dumbbell Lateral Raises", muscle: "Hombros", type: "Piramidal", reps: "20/15/12/10/8", sets: 5, rest: 45 },
+              { name: "Walking Overhead Press with Isometric Hold", muscle: "Hombros", type: "Drop Set", reps: "10-15", sets: 4, rest: 60 },
+              { name: "One-Arm Cable Triceps Extension", muscle: "Tríceps", type: "Normal", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Overhead Cable Triceps Extension With Rope", muscle: "Tríceps", type: "Normal", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Alternating Dumbbell Curl", muscle: "Bíceps", type: "Normal", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Standing Dumbbell Hammer Curl", muscle: "Bíceps", type: "Normal", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Cardio Session", muscle: "Cardio", type: "Normal", reps: "30 Min", sets: 1, rest: 0 }
+            ]
+          },
+          4: {
+            title: "Pecho, Espalda & Brazos",
+            exercises: [
+              { name: "Declined Bench Press", muscle: "Pecho", type: "Normal", reps: "8-12", sets: 4, rest: 90 },
+              { name: "Single-Arm Suspension Chest Press", muscle: "Pecho", type: "Normal", reps: "10-15", sets: 4, rest: 60 },
+              { name: "45-Degree Back Hyperextension", muscle: "Espalda", type: "Piramidal", reps: "20/15/12/10/8", sets: 5, rest: 45 },
+              { name: "Barbell Overhead Press", muscle: "Hombros", type: "Normal", reps: "8-12", sets: 4, rest: 90 },
+              { name: "Close Grip Lat Pulldown", muscle: "Espalda", type: "Piramidal", reps: "20/15/12/10/8", sets: 5, rest: 45 },
+              { name: "Straight Bar Triceps Pushdown", muscle: "Tríceps", type: "Drop Set", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Incline Dumbbell Curl (Chest-Supported)", muscle: "Bíceps", type: "Drop Set", reps: "10-15", sets: 4, rest: 60 }
+            ]
+          },
+          5: {
+            title: "Cadena Posterior & Glúteos + Cardio",
+            exercises: [
+              { name: "Single-Leg Barbell Romanian Deadlift", muscle: "Femoral", type: "Normal", reps: "8-12", sets: 4, rest: 90 },
+              { name: "Lateral Lunge", muscle: "Glúteos", type: "Normal", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Stability Ball Leg Curl", muscle: "Femoral", type: "Piramidal", reps: "20/15/12/10/8", sets: 5, rest: 45 },
+              { name: "Cable side kick", muscle: "Glúteos", type: "Piramidal", reps: "20/15/12/10/8", sets: 5, rest: 45 },
+              { name: "Dumbbell Toes-In Calf Raise", muscle: "Gemelos", type: "Drop Set", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Cardio Session", muscle: "Cardio", type: "Normal", reps: "30 Min", sets: 1, rest: 0 }
+            ]
+          }
+        }
+      },
+      4: {
+        focus: "Fase 1: Culminación & Resistencia",
+        days: {
+          1: {
+            title: "Torso & Brazos + Cardio",
+            exercises: [
+              { name: "V Bar Pulldown", muscle: "Espalda", type: "Normal", reps: "8-12", sets: 4, rest: 90 },
+              { name: "Single Arm Supported Dumbbell Row", muscle: "Espalda", type: "Piramidal", reps: "20/15/12/10/8", sets: 5, rest: 45 },
+              { name: "Low-To-High Cable Fly", muscle: "Pecho", type: "Piramidal", reps: "20/15/12/10/8", sets: 5, rest: 45 },
+              { name: "Standing Arnold Press", muscle: "Hombros", type: "Normal", reps: "8-12", sets: 4, rest: 90 },
+              { name: "Wide-grip Push-up", muscle: "Pecho", type: "Normal", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Incline Dumbbell Biceps Curl", muscle: "Bíceps", type: "Drop Set", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Straight Bar Triceps Pushdown", muscle: "Tríceps", type: "Drop Set", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Cardio Session", muscle: "Cardio", type: "Normal", reps: "30 Min", sets: 1, rest: 0 }
+            ]
+          },
+          2: {
+            title: "Pierna (Squats, Sumo Deadlift) & Core",
+            exercises: [
+              { name: "Barbell Partial and Full Squat", muscle: "Cuádriceps", type: "Normal", reps: "8-12", sets: 4, rest: 90 },
+              { name: "Side lunge", muscle: "Cuádriceps", type: "Normal", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Leg curl", muscle: "Femoral", type: "Normal", reps: "8-12", sets: 4, rest: 90 },
+              { name: "Barbell Sumo Deadlift", muscle: "Femoral", type: "Piramidal", reps: "20/15/12/10/8", sets: 5, rest: 45 },
+              { name: "Dumbbell Toes-In Calf Raise", muscle: "Gemelos", type: "Drop Set", reps: "10-15", sets: 4, rest: 60 },
+              { name: "V-Up", muscle: "Abdomen", type: "Normal", reps: "12", sets: 3, rest: 45 },
+              { name: "Reverse Crunch Kick-Up", muscle: "Abdomen", type: "Normal", reps: "12", sets: 3, rest: 45 },
+              { name: "Cross Crunch", muscle: "Abdomen", type: "Normal", reps: "12", sets: 3, rest: 45 }
+            ]
+          },
+          3: {
+            title: "Hombros, Tríceps & Bíceps + Cardio",
+            exercises: [
+              { name: "Shoulder Press Machine (neutral grip)", muscle: "Hombros", type: "Normal", reps: "8-12", sets: 4, rest: 90 },
+              { name: "Dumbbell Lateral Raise", muscle: "Hombros", type: "Piramidal", reps: "20/15/12/10/8", sets: 5, rest: 45 },
+              { name: "Walking Overhead Press with Isometric Hold", muscle: "Hombros", type: "Drop Set", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Cable Triceps Kickback", muscle: "Tríceps", type: "Normal", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Seated Dumbbell Triceps Extension", muscle: "Tríceps", type: "Normal", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Barbell Preacher Curl", muscle: "Bíceps", type: "Normal", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Incline Dumbbell Curl (Chest-Supported)", muscle: "Bíceps", type: "Normal", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Cardio Session", muscle: "Cardio", type: "Normal", reps: "30 Min", sets: 1, rest: 0 }
+            ]
+          },
+          4: {
+            title: "Pecho, Espalda & Brazos",
+            exercises: [
+              { name: "Fly Machine", muscle: "Pecho", type: "Normal", reps: "8-12", sets: 4, rest: 90 },
+              { name: "Single-Arm Low-To-High Cable Fly", muscle: "Pecho", type: "Normal", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Underhand Seated Cable Row", muscle: "Espalda", type: "Piramidal", reps: "20/15/12/10/8", sets: 5, rest: 45 },
+              { name: "Shoulder Press Machine (neutral grip)", muscle: "Hombros", type: "Normal", reps: "8-12", sets: 4, rest: 90 },
+              { name: "Renegade Row w/ Push-Up", muscle: "Espalda", type: "Piramidal", reps: "20/15/12/10/8", sets: 5, rest: 45 },
+              { name: "One-Arm Cable Triceps Extension", muscle: "Tríceps", type: "Drop Set", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Single Arm High Cable Biceps Curl", muscle: "Bíceps", type: "Drop Set", reps: "10-15", sets: 4, rest: 60 }
+            ]
+          },
+          5: {
+            title: "Cadena Posterior & Glúteos + Cardio",
+            exercises: [
+              { name: "Dumbbell Romanian Deadlift", muscle: "Femoral", type: "Normal", reps: "8-12", sets: 4, rest: 90 },
+              { name: "Side crab walk", muscle: "Glúteos", type: "Normal", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Single-Leg Stability Ball Leg Curl", muscle: "Femoral", type: "Piramidal", reps: "20/15/12/10/8", sets: 5, rest: 45 },
+              { name: "Cable Glute Kickback", muscle: "Glúteos", type: "Piramidal", reps: "20/15/12/10/8", sets: 5, rest: 45 },
+              { name: "Toes-Out Calf Raise", muscle: "Gemelos", type: "Drop Set", reps: "10-15", sets: 4, rest: 60 },
+              { name: "Cardio Session", muscle: "Cardio", type: "Normal", reps: "30 Min", sets: 1, rest: 0 }
+            ]
+          }
+        }
+      },
+
+      // ----------------- FASE 2: SEMANAS 5 A 8 (FUERZA 6-10 REPS, DESCANSOS 60s) -----------------
+      5: {
+        focus: "Fase 2: Fuerza e Intensificación (6-10 Reps)",
+        days: {
+          1: {
+            title: "Torso Pesado & Brazos + Cardio",
+            exercises: [
+              { name: "T-Bar Row", muscle: "Espalda", type: "Normal", reps: "6-10", sets: 4, rest: 60 },
+              { name: "Renegade Row w/ Push-Up", muscle: "Espalda", type: "Piramidal", reps: "15/12/10/8/6", sets: 5, rest: 60 },
+              { name: "Cable Cross body punch", muscle: "Pecho", type: "Piramidal", reps: "15/12/10/8/6", sets: 5, rest: 60 },
+              { name: "Seated Shoulder Press Machine (wide grip)", muscle: "Hombros", type: "Normal", reps: "6-10", sets: 4, rest: 60 },
+              { name: "Incline Plate Squeeze Press", muscle: "Pecho", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Barbell Reverse Grip Curl", muscle: "Bíceps", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Seated Dumbbell Triceps Extension", muscle: "Tríceps", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Cardio Session", muscle: "Cardio", type: "Normal", reps: "30 Min", sets: 1, rest: 0 }
+            ]
+          },
+          2: {
+            title: "Pierna Unilateral, RDL & Core",
+            exercises: [
+              { name: "Static Lunge", muscle: "Cuádriceps", type: "Normal", reps: "6-10", sets: 4, rest: 60 },
+              { name: "Bulgarian Split Squat Jump", muscle: "Cuádriceps", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Barbell Romanian Deadlift", muscle: "Femoral", type: "Normal", reps: "6-10", sets: 4, rest: 60 },
+              { name: "Single-Leg Bodyweight Romanian Deadlift", muscle: "Femoral", type: "Piramidal", reps: "15/12/10/8/6", sets: 5, rest: 60 },
+              { name: "Dumbbell Calf Raise", muscle: "Gemelos", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Bicycle Crunch", muscle: "Abdomen", type: "Normal", reps: "12", sets: 3, rest: 60 },
+              { name: "Seated Bicycle Crunch", muscle: "Abdomen", type: "Normal", reps: "12", sets: 3, rest: 60 },
+              { name: "Leg raises", muscle: "Abdomen", type: "Normal", reps: "12", sets: 3, rest: 60 }
+            ]
+          },
+          3: {
+            title: "Hombros, Tríceps & Bíceps 21s + Cardio",
+            exercises: [
+              { name: "Seated Shoulder Press Machine (wide grip)", muscle: "Hombros", type: "Normal", reps: "6-10", sets: 4, rest: 60 },
+              { name: "Bent-Over Dumbbell Rear Delt Fly", muscle: "Hombros", type: "Piramidal", reps: "15/12/10/8/6", sets: 5, rest: 60 },
+              { name: "Walking Overhead Press with Isometric Hold", muscle: "Hombros", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Machine Dips", muscle: "Tríceps", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Bench Close-Grip Push-Up 1.0", muscle: "Tríceps", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Barbell 21s Curl", muscle: "Bíceps", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Cable Rope Biceps Curl", muscle: "Bíceps", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Cardio Session", muscle: "Cardio", type: "Normal", reps: "30 Min", sets: 1, rest: 0 }
+            ]
+          },
+          4: {
+            title: "Pecho, Espalda & Brazos",
+            exercises: [
+              { name: "Chest Press Machine", muscle: "Pecho", type: "Normal", reps: "6-10", sets: 4, rest: 60 },
+              { name: "Flat Rotational Dumbbell Press", muscle: "Pecho", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "45-Degree Back Hyperextension", muscle: "Espalda", type: "Piramidal", reps: "15/12/10/8/6", sets: 5, rest: 60 },
+              { name: "Barbell Overhead Press", muscle: "Hombros", type: "Normal", reps: "6-10", sets: 4, rest: 60 },
+              { name: "Alternating Dumbbell Bent Over Row", muscle: "Espalda", type: "Piramidal", reps: "15/12/10/8/6", sets: 5, rest: 60 },
+              { name: "Bench-Supported Triceps Kickback", muscle: "Tríceps", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Barbell Preacher Curl", muscle: "Bíceps", type: "Normal", reps: "8-12", sets: 4, rest: 60 }
+            ]
+          },
+          5: {
+            title: "Glúteos & Femoral + Cardio",
+            exercises: [
+              { name: "Single-Leg Barbell Romanian Deadlift", muscle: "Femoral", type: "Normal", reps: "6-10", sets: 4, rest: 60 },
+              { name: "Cable pull through", muscle: "Glúteos", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Stability Ball Leg Curl", muscle: "Femoral", type: "Piramidal", reps: "15/12/10/8/6", sets: 5, rest: 60 },
+              { name: "Lateral Lunge", muscle: "Glúteos", type: "Piramidal", reps: "15/12/10/8/6", sets: 5, rest: 60 },
+              { name: "Dumbbell Calf Raise", muscle: "Gemelos", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Cardio Session", muscle: "Cardio", type: "Normal", reps: "30 Min", sets: 1, rest: 0 }
+            ]
+          }
+        }
+      },
+      6: {
+        focus: "Fase 2: Potencia & Densidad",
+        days: {
+          1: {
+            title: "Torso (Remo Supino & Fly Press) + Cardio",
+            exercises: [
+              { name: "Underhand Barbell Row", muscle: "Espalda", type: "Normal", reps: "6-10", sets: 4, rest: 60 },
+              { name: "Dumbbell Pullover", muscle: "Espalda", type: "Piramidal", reps: "15/12/10/8/6", sets: 5, rest: 60 },
+              { name: "Dumbell flat fly to press", muscle: "Pecho", type: "Piramidal", reps: "15/12/10/8/6", sets: 5, rest: 60 },
+              { name: "Seated Arnold Press", muscle: "Hombros", type: "Normal", reps: "6-10", sets: 4, rest: 60 },
+              { name: "Narrow-grip Incline Push-up", muscle: "Pecho", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Concentration Curl", muscle: "Bíceps", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Overhead Cable Triceps Extension With Rope", muscle: "Tríceps", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Cardio Session", muscle: "Cardio", type: "Normal", reps: "30 Min", sets: 1, rest: 0 }
+            ]
+          },
+          2: {
+            title: "Pierna (Jump Squat, Hack Squat) & Core",
+            exercises: [
+              { name: "Jump squat", muscle: "Cuádriceps", type: "Normal", reps: "6-10", sets: 4, rest: 60 },
+              { name: "Side lunge", muscle: "Cuádriceps", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Barbell Hack Squat", muscle: "Femoral", type: "Normal", reps: "6-10", sets: 4, rest: 60 },
+              { name: "Stability Ball Leg Curl", muscle: "Femoral", type: "Piramidal", reps: "15/12/10/8/6", sets: 5, rest: 60 },
+              { name: "Dumbbell Toes-In Calf Raise", muscle: "Gemelos", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Assisted V-Up", muscle: "Abdomen", type: "Normal", reps: "12", sets: 3, rest: 60 },
+              { name: "Star Crunch", muscle: "Abdomen", type: "Normal", reps: "12", sets: 3, rest: 60 },
+              { name: "Reverse Crunch Kick-Up", muscle: "Abdomen", type: "Normal", reps: "12", sets: 3, rest: 60 }
+            ]
+          },
+          3: {
+            title: "Hombros, Tríceps & Bíceps + Cardio",
+            exercises: [
+              { name: "Dumbbell Shoulder Press", muscle: "Hombros", type: "Normal", reps: "6-10", sets: 4, rest: 60 },
+              { name: "Seated Single-Arm Dumbbell Lateral Raise", muscle: "Hombros", type: "Piramidal", reps: "15/12/10/8/6", sets: 5, rest: 60 },
+              { name: "Walking Overhead Press with Isometric Hold", muscle: "Hombros", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Barbell Close-Grip Triceps Press", muscle: "Tríceps", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Bench Dips", muscle: "Tríceps", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Incline Dumbbell Curl (Chest-Supported)", muscle: "Bíceps", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Seated Hammer Curl", muscle: "Bíceps", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Cardio Session", muscle: "Cardio", type: "Normal", reps: "30 Min", sets: 1, rest: 0 }
+            ]
+          },
+          4: {
+            title: "Pecho, Espalda & Brazos",
+            exercises: [
+              { name: "Flat Dumbbell Chest Press", muscle: "Pecho", type: "Normal", reps: "6-10", sets: 4, rest: 60 },
+              { name: "Cable Cross body punch", muscle: "Pecho", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Renegade Row", muscle: "Espalda", type: "Piramidal", reps: "15/12/10/8/6", sets: 5, rest: 60 },
+              { name: "Seated Arnold Press", muscle: "Hombros", type: "Normal", reps: "6-10", sets: 4, rest: 60 },
+              { name: "Underhand Dumbbell Bent Over Row", muscle: "Espalda", type: "Piramidal", reps: "15/12/10/8/6", sets: 5, rest: 60 },
+              { name: "Bench Close-Grip Push-Up 2.0", muscle: "Tríceps", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Single Arm High Cable Biceps Curl", muscle: "Bíceps", type: "Normal", reps: "8-12", sets: 4, rest: 60 }
+            ]
+          },
+          5: {
+            title: "Cadena Posterior & Glúteos + Cardio",
+            exercises: [
+              { name: "Barbell Deadlift", muscle: "Femoral", type: "Normal", reps: "6-10", sets: 4, rest: 60 },
+              { name: "Crab walk", muscle: "Glúteos", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Single-Leg Stability Ball Leg Curl", muscle: "Femoral", type: "Piramidal", reps: "15/12/10/8/6", sets: 5, rest: 60 },
+              { name: "Cable Glute Kickback", muscle: "Glúteos", type: "Piramidal", reps: "15/12/10/8/6", sets: 5, rest: 60 },
+              { name: "Toes-Out Calf Raise", muscle: "Gemelos", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Cardio Session", muscle: "Cardio", type: "Normal", reps: "30 Min", sets: 1, rest: 0 }
+            ]
+          }
+        }
+      },
+      7: {
+        focus: "Fase 2: Sobrecarga Progresiva Alta",
+        days: {
+          1: {
+            title: "Torso Pesado & Brazos + Cardio",
+            exercises: [
+              { name: "Chest Supported Machine Row", muscle: "Espalda", type: "Normal", reps: "6-10", sets: 4, rest: 60 },
+              { name: "Underhand Dumbbell Bent Over Row", muscle: "Espalda", type: "Piramidal", reps: "15/12/10/8/6", sets: 5, rest: 60 },
+              { name: "Flat Dumbbell Fly", muscle: "Pecho", type: "Piramidal", reps: "15/12/10/8/6", sets: 5, rest: 60 },
+              { name: "Seated High Incline Dumbbell Shoulder Press", muscle: "Hombros", type: "Normal", reps: "6-10", sets: 4, rest: 60 },
+              { name: "Plyo Push-up", muscle: "Pecho", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Alternating Dumbbell Curl", muscle: "Bíceps", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Bench Dips", muscle: "Tríceps", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Cardio Session", muscle: "Cardio", type: "Normal", reps: "30 Min", sets: 1, rest: 0 }
+            ]
+          },
+          2: {
+            title: "Pierna (Side Jump Squat, Romanian Deadlift) & Core",
+            exercises: [
+              { name: "Side jump squat", muscle: "Cuádriceps", type: "Normal", reps: "6-10", sets: 4, rest: 60 },
+              { name: "Dumbell squat", muscle: "Cuádriceps", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Barbell Romanian Deadlift", muscle: "Femoral", type: "Normal", reps: "6-10", sets: 4, rest: 60 },
+              { name: "Single-Leg Bodyweight Romanian Deadlift", muscle: "Femoral", type: "Piramidal", reps: "15/12/10/8/6", sets: 5, rest: 60 },
+              { name: "Dumbbell Calf Raise", muscle: "Gemelos", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Bicycle Crunch", muscle: "Abdomen", type: "Normal", reps: "12", sets: 3, rest: 60 },
+              { name: "V-Up", muscle: "Abdomen", type: "Normal", reps: "12", sets: 3, rest: 60 },
+              { name: "Bird Dog", muscle: "Abdomen", type: "Normal", reps: "12", sets: 3, rest: 60 }
+            ]
+          },
+          3: {
+            title: "Hombros, Tríceps & Bíceps + Cardio",
+            exercises: [
+              { name: "Shoulder Press Machine (neutral grip)", muscle: "Hombros", type: "Normal", reps: "6-10", sets: 4, rest: 60 },
+              { name: "Single Arm Front and Lateral Dumbbell Raise", muscle: "Hombros", type: "Piramidal", reps: "15/12/10/8/6", sets: 5, rest: 60 },
+              { name: "Walking Overhead Press with Isometric Hold", muscle: "Hombros", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "One-Arm Cable Triceps Extension", muscle: "Tríceps", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Bench Close-Grip Push-Up 1.0", muscle: "Tríceps", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Dumbbell Biceps Curl", muscle: "Bíceps", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Seated Dumbbell Biceps Curl", muscle: "Bíceps", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Cardio Session", muscle: "Cardio", type: "Normal", reps: "30 Min", sets: 1, rest: 0 }
+            ]
+          },
+          4: {
+            title: "Pecho Inclinado, Espalda & Brazos",
+            exercises: [
+              { name: "Barbell Incline Chest Press", muscle: "Pecho", type: "Normal", reps: "6-10", sets: 4, rest: 60 },
+              { name: "Single-Arm Low-To-High Cable Fly", muscle: "Pecho", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Close Grip Lat Pulldown", muscle: "Espalda", type: "Piramidal", reps: "15/12/10/8/6", sets: 5, rest: 60 },
+              { name: "Barbell Overhead Press", muscle: "Hombros", type: "Normal", reps: "6-10", sets: 4, rest: 60 },
+              { name: "Renegade Row w/ Push-Up", muscle: "Espalda", type: "Piramidal", reps: "15/12/10/8/6", sets: 5, rest: 60 },
+              { name: "Bench Dips", muscle: "Tríceps", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Cable Rope Biceps Curl", muscle: "Bíceps", type: "Normal", reps: "8-12", sets: 4, rest: 60 }
+            ]
+          },
+          5: {
+            title: "Glúteos & Femoral + Cardio",
+            exercises: [
+              { name: "Single-Leg Barbell Romanian Deadlift", muscle: "Femoral", type: "Normal", reps: "6-10", sets: 4, rest: 60 },
+              { name: "Cable side kick", muscle: "Glúteos", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Stability Ball Leg Curl", muscle: "Femoral", type: "Piramidal", reps: "15/12/10/8/6", sets: 5, rest: 60 },
+              { name: "Dumbbell Glute Kickback", muscle: "Glúteos", type: "Piramidal", reps: "15/12/10/8/6", sets: 5, rest: 60 },
+              { name: "Dumbbell Toes-In Calf Raise", muscle: "Gemelos", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Cardio Session", muscle: "Cardio", type: "Normal", reps: "30 Min", sets: 1, rest: 0 }
+            ]
+          }
+        }
+      },
+      8: {
+        focus: "Fase 2: Semana Cumbre y Récords",
+        days: {
+          1: {
+            title: "Torso Pesado & Brazos + Cardio",
+            exercises: [
+              { name: "Single Arm Supported Dumbbell Row", muscle: "Espalda", type: "Normal", reps: "6-10", sets: 4, rest: 60 },
+              { name: "Wide Grip Seated Cable Row", muscle: "Espalda", type: "Piramidal", reps: "15/12/10/8/6", sets: 5, rest: 60 },
+              { name: "Incline Dumbbell Around The World", muscle: "Pecho", type: "Piramidal", reps: "15/12/10/8/6", sets: 5, rest: 60 },
+              { name: "Dumbbell Shoulder Press", muscle: "Hombros", type: "Normal", reps: "6-10", sets: 4, rest: 60 },
+              { name: "Decline Push-up", muscle: "Pecho", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Single Arm Cable Preacher Curl", muscle: "Bíceps", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Barbell Close-Grip Triceps Press", muscle: "Tríceps", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Cardio Session", muscle: "Cardio", type: "Normal", reps: "30 Min", sets: 1, rest: 0 }
+            ]
+          },
+          2: {
+            title: "Prensa, Sumo Deadlift & Core",
+            exercises: [
+              { name: "Leg press", muscle: "Cuádriceps", type: "Normal", reps: "6-10", sets: 4, rest: 60 },
+              { name: "Lunge skip", muscle: "Cuádriceps", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Dumbbell Romanian Deadlift", muscle: "Femoral", type: "Normal", reps: "6-10", sets: 4, rest: 60 },
+              { name: "Barbell Sumo Deadlift", muscle: "Femoral", type: "Piramidal", reps: "15/12/10/8/6", sets: 5, rest: 60 },
+              { name: "Toes-Out Calf Raise", muscle: "Gemelos", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Star Crunch", muscle: "Abdomen", type: "Normal", reps: "12", sets: 3, rest: 60 },
+              { name: "Mountain Climbers", muscle: "Abdomen", type: "Normal", reps: "12", sets: 3, rest: 60 },
+              { name: "Cross Crunch", muscle: "Abdomen", type: "Normal", reps: "12", sets: 3, rest: 60 }
+            ]
+          },
+          3: {
+            title: "Hombros, Tríceps & Bíceps + Cardio",
+            exercises: [
+              { name: "Seated Shoulder Press Machine (wide grip)", muscle: "Hombros", type: "Normal", reps: "6-10", sets: 4, rest: 60 },
+              { name: "Around the World", muscle: "Hombros", type: "Piramidal", reps: "15/12/10/8/6", sets: 5, rest: 60 },
+              { name: "Walking Overhead Press with Isometric Hold", muscle: "Hombros", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Seated Dumbbell Triceps Extension", muscle: "Tríceps", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Dumbbell Close-Grip Triceps Press", muscle: "Tríceps", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Standing Dumbbell Hammer Curl", muscle: "Bíceps", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Concentration Curl", muscle: "Bíceps", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Cardio Session", muscle: "Cardio", type: "Normal", reps: "30 Min", sets: 1, rest: 0 }
+            ]
+          },
+          4: {
+            title: "Pecho, Espalda & Brazos",
+            exercises: [
+              { name: "High-To-Low Cable Fly", muscle: "Pecho", type: "Normal", reps: "6-10", sets: 4, rest: 60 },
+              { name: "Flat Dumbbell Fly", muscle: "Pecho", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Alternating Dumbbell Bent Over Row", muscle: "Espalda", type: "Piramidal", reps: "15/12/10/8/6", sets: 5, rest: 60 },
+              { name: "Seated Arnold Press", muscle: "Hombros", type: "Normal", reps: "6-10", sets: 4, rest: 60 },
+              { name: "Dumbbell Pullover", muscle: "Espalda", type: "Piramidal", reps: "15/12/10/8/6", sets: 5, rest: 60 },
+              { name: "Machine Dips", muscle: "Tríceps", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Barbell Preacher Curl", muscle: "Bíceps", type: "Normal", reps: "8-12", sets: 4, rest: 60 }
+            ]
+          },
+          5: {
+            title: "Glúteos & Femoral + Cardio",
+            exercises: [
+              { name: "Barbell Romanian Deadlift", muscle: "Femoral", type: "Normal", reps: "6-10", sets: 4, rest: 60 },
+              { name: "Cable Glute Kickback", muscle: "Glúteos", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Barbell Sumo Deadlift", muscle: "Femoral", type: "Piramidal", reps: "15/12/10/8/6", sets: 5, rest: 60 },
+              { name: "Side crab walk", muscle: "Glúteos", type: "Piramidal", reps: "15/12/10/8/6", sets: 5, rest: 60 },
+              { name: "Toes-Out Calf Raise", muscle: "Gemelos", type: "Normal", reps: "8-12", sets: 4, rest: 60 },
+              { name: "Cardio Session", muscle: "Cardio", type: "Normal", reps: "30 Min", sets: 1, rest: 0 }
+            ]
+          }
+        }
+      }
+    };
+
+    /* ================= TRANSLATIONS (ES / EN) ================= */
+    const TRANSLATIONS = {
+      es: {
+        headerSubtitle: "Registro de Entrenamiento Diario",
+        backupAndData: "Copia de Seguridad & Datos",
+        restTime: "Tiempo de Descanso",
+        stop: "Detener",
+        tabWorkout: "Entrenamiento",
+        tabHistory: "Historial & Récords",
+        tabMethod: "Metodología",
+        planWeek: "Semana del Plan",
+        exercises: "Ejercicios",
+        completed: "Completados",
+        saveSession: "Guardar Sesión",
+        completeAndSave: "Completar y Guardar Sesión",
+        metricSessions: "Sesiones Realizadas",
+        metricSets: "Series Completadas",
+        metricVolume: "Volumen Acumulado",
+        metricPRs: "Ejercicios Récord",
+        prTitle: "Récords Personales (Carga Máxima Lograda)",
+        updatedRealtime: "Actualizado en tiempo real",
+        thExercise: "Ejercicio",
+        thMaxWeight: "Peso Máximo",
+        thReps: "Reps Logradas",
+        thEst1RM: "1RM Estimado",
+        thDate: "Fecha",
+        historyLogTitle: "Bitácora de Sesiones Guardadas",
+        clearAll: "Borrar Todo",
+        guidelinesTag: "Directrices de Javier Rosa",
+        rulesTitle: "Reglas Fundamentales del Programa de 8 Semanas",
+        rulesIntro: "Esta rutina está diseñada sobre un bloque semanal de 5 días de entrenamiento y 2 días de descanso. Puedes comenzar cualquier día y entrenar seguido o alternado. Lo crucial es completar los 5 días en el ciclo y respetar la técnica estricta sobre el peso levantado.",
+        normalSet: "Set Normal",
+        normalSetDesc: "Ritmo controlado y técnica óptima. Carga moderada que exija esfuerzo real (RPE 7-8) sin llegar a la deformación técnica.",
+        pyramidSet: "Serie Piramidal",
+        pyramidSetDesc: "Se inicia con más repeticiones y menor peso; en cada serie se incrementa la carga reduciendo las repeticiones (ej. 20→15→12→10→8 o 15→12→10→8→6).",
+        dropSet: "Drop Set Descendente",
+        dropSetDesc: "En la última serie, realizar repeticiones hasta el fallo muscular, bajar inmediatamente 20-30% del peso y continuar sin descanso hasta el fallo.",
+        supportQuestion: "¿Dudas con la técnica o molestias articulares?",
+        backupIntro: "Tus registros de series, pesos y notas se guardan de forma local en tu navegador. Puedes exportar o restaurar una copia de seguridad en archivo JSON cuando quieras.",
+        exportBackup: "Exportar Copia de Seguridad (JSON)",
+        importBackup: "Importar Copia de Seguridad",
+        resetDay: "Limpiar series del día actual",
+        week: "Semana",
+        day: "Día",
+        dayShort: "DÍA",
+        phase1: "Fase 1: Hipertrofia (8-15 Reps)",
+        phase2: "Fase 2: Fuerza (6-10 Reps • 60s)",
+        workoutPrefix: "Entrenamiento",
+        target: "Objetivo",
+        startRest: "Iniciar Descanso",
+        watchVideo: "Ver Demostración en Video",
+        technique: "Técnica",
+        cardioPrescribed: "Sesión de resistencia cardiovascular prescrita:",
+        cardioDuration: "30 Minutos (LISS suave o moderado)",
+        markCardio: "Marcar cardio como completado",
+        load: "Carga",
+        done: "Hecho",
+        addSet: "Agregar Serie",
+        editNote: "Editar Nota",
+        addNote: "Añadir Nota",
+        notePlaceholder: "Notas de la máquina: altura de polea, sensaciones, ángulo...",
+        removeSet: "Eliminar serie",
+        noPRs: "No hay marcas registradas aún. Completa tus series pesadas para desbloquear récords.",
+        noHistory: 'No hay entrenamientos archivados aún. Haz clic en "Guardar Sesión" al finalizar tu rutina.',
+        sets: "Series",
+        volume: "Volumen",
+        unitChanged: "Unidad cambiada a {unit}",
+        setDoneToast: "Serie #{n} completada. ¡Inicia descanso de {s}s!",
+        cardioDone: "¡Cardio completado!",
+        cardioUndone: "Cardio desmarcado",
+        markOneSet: "Marca al menos una serie completada antes de archivar.",
+        workoutSaved: "¡Entrenamiento guardado con éxito! Volumen: {volume} {unit}",
+        confirmClearHistory: "¿Estás seguro de que deseas vaciar el historial de entrenamientos guardados? Los récords personales se mantendrán.",
+        historyCleared: "Historial vaciado",
+        sessionReset: "Series reiniciadas para la sesión actual",
+        restOver: "¡Tiempo de descanso finalizado! A por la siguiente serie.",
+        backupDownloaded: "Copia de seguridad descargada.",
+        dataRestored: "¡Datos restaurados con éxito!",
+        jsonError: "Error al leer el archivo JSON.",
+        languageChanged: "Idioma cambiado a Español"
+      },
+      en: {
+        headerSubtitle: "Daily Training Log",
+        backupAndData: "Backup & Data",
+        restTime: "Rest Time",
+        stop: "Stop",
+        tabWorkout: "Workout",
+        tabHistory: "History & Records",
+        tabMethod: "Methodology",
+        planWeek: "Plan Week",
+        exercises: "Exercises",
+        completed: "Completed",
+        saveSession: "Save Session",
+        completeAndSave: "Complete & Save Session",
+        metricSessions: "Sessions Completed",
+        metricSets: "Sets Completed",
+        metricVolume: "Total Volume",
+        metricPRs: "Record Exercises",
+        prTitle: "Personal Records (Max Load Achieved)",
+        updatedRealtime: "Updated in real time",
+        thExercise: "Exercise",
+        thMaxWeight: "Max Weight",
+        thReps: "Reps Achieved",
+        thEst1RM: "Estimated 1RM",
+        thDate: "Date",
+        historyLogTitle: "Saved Sessions Log",
+        clearAll: "Clear All",
+        guidelinesTag: "Javier Rosa's Guidelines",
+        rulesTitle: "Core Rules of the 8-Week Program",
+        rulesIntro: "This routine is built on a weekly block of 5 training days and 2 rest days. You can start on any day and train on consecutive or alternating days. What matters is completing all 5 days in the cycle and prioritizing strict technique over the weight lifted.",
+        normalSet: "Normal Set",
+        normalSetDesc: "Controlled tempo and optimal technique. A moderate load that demands real effort (RPE 7-8) without breaking form.",
+        pyramidSet: "Pyramid Set",
+        pyramidSetDesc: "Start with more reps and less weight; increase the load each set while reducing reps (e.g. 20→15→12→10→8 or 15→12→10→8→6).",
+        dropSet: "Descending Drop Set",
+        dropSetDesc: "On the last set, perform reps to muscle failure, immediately drop the weight by 20-30% and keep going without rest until failure.",
+        supportQuestion: "Questions about technique or joint discomfort?",
+        backupIntro: "Your sets, weights and notes are stored locally in your browser. You can export or restore a JSON backup whenever you wish.",
+        exportBackup: "Export Backup (JSON)",
+        importBackup: "Import Backup",
+        resetDay: "Clear today's sets",
+        week: "Week",
+        day: "Day",
+        dayShort: "DAY",
+        phase1: "Phase 1: Hypertrophy (8-15 Reps)",
+        phase2: "Phase 2: Strength (6-10 Reps • 60s)",
+        workoutPrefix: "Workout",
+        target: "Target",
+        startRest: "Start Rest",
+        watchVideo: "Watch Video Demo",
+        technique: "Technique",
+        cardioPrescribed: "Prescribed cardiovascular endurance session:",
+        cardioDuration: "30 Minutes (light or moderate LISS)",
+        markCardio: "Mark cardio as completed",
+        load: "Load",
+        done: "Done",
+        addSet: "Add Set",
+        editNote: "Edit Note",
+        addNote: "Add Note",
+        notePlaceholder: "Machine notes: pulley height, feel, angle...",
+        removeSet: "Remove set",
+        noPRs: "No records logged yet. Complete your heavy sets to unlock records.",
+        noHistory: 'No saved workouts yet. Click "Save Session" when you finish your routine.',
+        sets: "Sets",
+        volume: "Volume",
+        unitChanged: "Unit changed to {unit}",
+        setDoneToast: "Set #{n} completed. Rest {s}s!",
+        cardioDone: "Cardio completed!",
+        cardioUndone: "Cardio unmarked",
+        markOneSet: "Mark at least one set as completed before saving.",
+        workoutSaved: "Workout saved successfully! Volume: {volume} {unit}",
+        confirmClearHistory: "Are you sure you want to clear your saved workout history? Personal records will be kept.",
+        historyCleared: "History cleared",
+        sessionReset: "Sets reset for the current session",
+        restOver: "Rest time is over! On to the next set.",
+        backupDownloaded: "Backup downloaded.",
+        dataRestored: "Data restored successfully!",
+        jsonError: "Error reading the JSON file.",
+        languageChanged: "Language changed to English"
+      }
+    };
+
+    const PROGRAM_TERMS_EN = {
+      "Cadena Posterior & Glúteos + Cardio": "Posterior Chain & Glutes + Cardio",
+      "Cuádriceps, Femoral & Abdomen": "Quads, Hamstrings & Abs",
+      "Espalda, Pecho & Brazos + Cardio": "Back, Chest & Arms + Cardio",
+      "Glúteos & Femoral + Cardio": "Glutes & Hamstrings + Cardio",
+      "Hombros, Brazos & Cardio": "Shoulders, Arms & Cardio",
+      "Hombros, Tríceps & Bíceps 21s + Cardio": "Shoulders, Triceps & Biceps 21s + Cardio",
+      "Hombros, Tríceps & Bíceps + Cardio": "Shoulders, Triceps & Biceps + Cardio",
+      "Pecho, Espalda & Brazos": "Chest, Back & Arms",
+      "Pecho Inclinado, Espalda & Brazos": "Incline Chest, Back & Arms",
+      "Pierna Completa & Core": "Full Legs & Core",
+      "Pierna (Cuádriceps, Femoral) & Core": "Legs (Quads, Hamstrings) & Core",
+      "Pierna (Jump Squat, Hack Squat) & Core": "Legs (Jump Squat, Hack Squat) & Core",
+      "Pierna (Jump Squat, Romanian Deadlift) & Core": "Legs (Jump Squat, Romanian Deadlift) & Core",
+      "Pierna (Squats, Sumo Deadlift) & Core": "Legs (Squats, Sumo Deadlift) & Core",
+      "Pierna Unilateral, RDL & Core": "Unilateral Legs, RDL & Core",
+      "Prensa, Sumo Deadlift & Core": "Leg Press, Sumo Deadlift & Core",
+      "Torso & Brazos + Cardio": "Upper Body & Arms + Cardio",
+      "Torso (Espalda, Pecho, Hombro & Brazos)": "Upper Body (Back, Chest, Shoulders & Arms)",
+      "Torso Pesado & Brazos + Cardio": "Heavy Upper Body & Arms + Cardio",
+      "Torso (Remo Supino & Fly Press) + Cardio": "Upper Body (Underhand Row & Fly Press) + Cardio",
+      "Abdomen": "Abs",
+      "Bíceps": "Biceps",
+      "Cuádriceps": "Quads",
+      "Espalda": "Back",
+      "Femoral": "Hamstrings",
+      "Gemelos": "Calves",
+      "Glúteos": "Glutes",
+      "Hombros": "Shoulders",
+      "Pecho": "Chest",
+      "Tríceps": "Triceps",
+      "Piramidal": "Pyramid",
+      "Normal": "Normal",
+      "Drop Set": "Drop Set"
+    };
+
+    let currentLang = 'es';
+
+    function t(key, vars = {}) {
+      const str = TRANSLATIONS[currentLang][key] ?? TRANSLATIONS.es[key] ?? key;
+      return str.replace(/\{(\w+)\}/g, (_, v) => vars[v] ?? '');
+    }
+
+    function tp(term) {
+      return currentLang === 'en' ? (PROGRAM_TERMS_EN[term] || term) : term;
+    }
+
+    function applyStaticTranslations() {
+      document.documentElement.lang = currentLang;
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        el.textContent = t(el.dataset.i18n);
+      });
+      document.querySelectorAll('[data-i18n-title]').forEach(el => {
+        el.title = t(el.dataset.i18nTitle);
+      });
+      const langIndicator = document.getElementById('langIndicator');
+      if (langIndicator) {
+        langIndicator.textContent = currentLang === 'es' ? 'EN' : 'ES';
+      }
+    }
+
+    function toggleLanguage() {
+      currentLang = currentLang === 'es' ? 'en' : 'es';
+      localStorage.setItem('ll_tracker_lang', currentLang);
+      applyStaticTranslations();
+      renderWeekList();
+      renderDayButtons();
+      loadCurrentSession();
+      renderPRsTable();
+      renderHistoryList();
+      showToast(t('languageChanged'));
+    }
+
+    /* ================= APP STATE ================= */
+    let currentWeek = 1;
+    let currentDay = 1;
+    let weightUnit = 'kg'; // 'kg' or 'lbs'
+    
+    let activeSessionLogs = {};
+    let savedWorkoutsHistory = [];
+    let personalRecords = {};
+
+    // Rest Timer State
+    let timerInterval = null;
+    let timerTotalDuration = 60;
+    let timerRemaining = 0;
+    let audioContext = null;
+
+    /* ================= INITIALIZATION ================= */
+    window.addEventListener('DOMContentLoaded', () => {
+      const storedLang = localStorage.getItem('ll_tracker_lang');
+      if (storedLang && TRANSLATIONS[storedLang]) currentLang = storedLang;
+
+      loadStateFromStorage();
+      updateUnitIndicator();
+      applyStaticTranslations();
+      renderWeekList();
+      renderDayButtons();
+      loadCurrentSession();
+      renderPRsTable();
+      renderHistoryList();
+      lucide.createIcons();
+    });
+
+    /* ================= STORAGE MANAGEMENT ================= */
+    function loadStateFromStorage() {
+      try {
+        const storedUnit = localStorage.getItem('ll_tracker_unit');
+        if (storedUnit) weightUnit = storedUnit;
+
+        const storedWeek = localStorage.getItem('ll_tracker_week');
+        if (storedWeek && PROGRAM_DATA[storedWeek]) currentWeek = parseInt(storedWeek);
+
+        const storedDay = localStorage.getItem('ll_tracker_day');
+        if (storedDay && PROGRAM_DATA[currentWeek]?.days[storedDay]) currentDay = parseInt(storedDay);
+
+        const storedActive = localStorage.getItem('ll_tracker_active_logs');
+        if (storedActive) activeSessionLogs = JSON.parse(storedActive);
+
+        const storedHistory = localStorage.getItem('ll_tracker_history');
+        if (storedHistory) savedWorkoutsHistory = JSON.parse(storedHistory);
+
+        const storedPRs = localStorage.getItem('ll_tracker_prs');
+        if (storedPRs) personalRecords = JSON.parse(storedPRs);
+      } catch (e) {
+        console.error("Error reading localStorage:", e);
+      }
+    }
+
+    function saveStateToStorage() {
+      try {
+        localStorage.setItem('ll_tracker_unit', weightUnit);
+        localStorage.setItem('ll_tracker_week', currentWeek);
+        localStorage.setItem('ll_tracker_day', currentDay);
+        localStorage.setItem('ll_tracker_active_logs', JSON.stringify(activeSessionLogs));
+        localStorage.setItem('ll_tracker_history', JSON.stringify(savedWorkoutsHistory));
+        localStorage.setItem('ll_tracker_prs', JSON.stringify(personalRecords));
+      } catch (e) {
+        console.error("Error saving to localStorage:", e);
+      }
+    }
+
+    function toggleUnit() {
+      weightUnit = weightUnit === 'kg' ? 'lbs' : 'kg';
+      updateUnitIndicator();
+      saveStateToStorage();
+      loadCurrentSession();
+      renderPRsTable();
+      showToast(t('unitChanged', { unit: weightUnit.toUpperCase() }));
+    }
+
+    function updateUnitIndicator() {
+      const el = document.getElementById('unitIndicator');
+      if (el) el.textContent = weightUnit.toUpperCase();
+    }
+
+    /* ================= NAVIGATION & VIEW SWITCHING ================= */
+    function switchMainTab(tab) {
+      const vWorkout = document.getElementById('viewWorkout');
+      const vHistory = document.getElementById('viewHistory');
+      const vInfo = document.getElementById('viewInfo');
+      const btnWorkout = document.getElementById('tabWorkoutBtn');
+      const btnHistory = document.getElementById('tabHistoryBtn');
+      const btnInfo = document.getElementById('tabPlanInfoBtn');
+
+      [vWorkout, vHistory, vInfo].forEach(v => v.classList.add('hidden'));
+      [btnWorkout, btnHistory, btnInfo].forEach(b => {
+        b.className = "flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs md:text-sm font-bold transition text-slate-400 hover:text-white";
+      });
+
+      if (tab === 'workout') {
+        vWorkout.classList.remove('hidden');
+        btnWorkout.className = "flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs md:text-sm font-bold transition bg-brand-600 text-white shadow";
+      } else if (tab === 'history') {
+        vHistory.classList.remove('hidden');
+        btnHistory.className = "flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs md:text-sm font-bold transition bg-brand-600 text-white shadow";
+        renderHistoryList();
+        renderPRsTable();
+      } else if (tab === 'info') {
+        vInfo.classList.remove('hidden');
+        btnInfo.className = "flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs md:text-sm font-bold transition bg-brand-600 text-white shadow";
+      }
+      lucide.createIcons();
+    }
+
+    function renderWeekList() {
+      const container = document.getElementById('weekListContainer');
+      container.innerHTML = '';
+
+      for (let w = 1; w <= 8; w++) {
+        const isSelected = w === currentWeek;
+        const btn = document.createElement('button');
+        btn.onclick = () => selectWeek(w);
+        btn.className = `flex-shrink-0 px-3.5 py-1.5 rounded-lg text-xs font-bold transition border ${
+          isSelected 
+            ? 'bg-brand-600 text-white border-brand-500 shadow-md shadow-brand-600/30' 
+            : 'bg-gym-card text-slate-300 border-gym-border hover:bg-gym-border'
+        }`;
+        btn.textContent = `${t('week')} ${w}`;
+        container.appendChild(btn);
+      }
+    }
+
+    function selectWeek(week) {
+      currentWeek = week;
+      renderWeekList();
+      renderDayButtons();
+      loadCurrentSession();
+      saveStateToStorage();
+    }
+
+    function renderDayButtons() {
+      const container = document.getElementById('dayButtonsContainer');
+      container.innerHTML = '';
+
+      for (let d = 1; d <= 5; d++) {
+        const isSelected = d === currentDay;
+        const btn = document.createElement('button');
+        btn.onclick = () => selectDay(d);
+        btn.className = `py-2 rounded-lg text-xs font-black uppercase transition border flex flex-col items-center justify-center gap-0.5 ${
+          isSelected 
+            ? 'bg-brand-400 text-black border-brand-300 shadow-md font-black' 
+            : 'bg-gym-card text-slate-300 border-gym-border hover:bg-gym-border'
+        }`;
+        btn.innerHTML = `<span class="text-[9px] opacity-75">${t('dayShort')}</span><span>${d}</span>`;
+        container.appendChild(btn);
+      }
+    }
+
+    function selectDay(day) {
+      currentDay = day;
+      renderDayButtons();
+      loadCurrentSession();
+      saveStateToStorage();
+    }
+
+    /* ================= WORKOUT SESSION RENDERING ================= */
+    function getSessionKey() {
+      return `w${currentWeek}_d${currentDay}`;
+    }
+
+    function loadCurrentSession() {
+      const weekObj = PROGRAM_DATA[currentWeek];
+      const dayObj = weekObj ? weekObj.days[currentDay] : null;
+
+      // Update Header Info
+      document.getElementById('sessionTagTitle').textContent = `${t('week')} ${currentWeek} • ${t('day')} ${currentDay}`;
+      document.getElementById('phaseTag').textContent = currentWeek <= 4 
+        ? t('phase1')
+        : t('phase2');
+      
+      if (!dayObj) return;
+
+      document.getElementById('sessionDayFocus').textContent = tp(dayObj.title);
+      document.getElementById('sessionHeadline').textContent = `${t('workoutPrefix')}: ${tp(dayObj.title)}`;
+      document.getElementById('statsExercisesCount').textContent = dayObj.exercises.length;
+
+      const sessionKey = getSessionKey();
+      if (!activeSessionLogs[sessionKey]) {
+        activeSessionLogs[sessionKey] = {
+          notes: {},
+          exercises: dayObj.exercises.map(ex => ({
+            name: ex.name,
+            sets: Array.from({ length: ex.sets || 4 }, (_, i) => ({
+              setNum: i + 1,
+              weight: '',
+              reps: '',
+              completed: false
+            }))
+          }))
+        };
+        saveStateToStorage();
+      }
+
+      renderExercisesList(dayObj, activeSessionLogs[sessionKey]);
+      updateSessionProgressStats();
+      lucide.createIcons();
+    }
+
+    function renderExercisesList(dayObj, sessionData) {
+      const container = document.getElementById('exerciseListContainer');
+      container.innerHTML = '';
+
+      dayObj.exercises.forEach((exTemplate, exIndex) => {
+        let loggedEx = sessionData.exercises[exIndex];
+        if (!loggedEx) {
+          loggedEx = {
+            name: exTemplate.name,
+            sets: Array.from({ length: exTemplate.sets || 4 }, (_, i) => ({
+              setNum: i + 1, weight: '', reps: '', completed: false
+            }))
+          };
+          sessionData.exercises[exIndex] = loggedEx;
+        }
+
+        const isCardio = exTemplate.muscle === 'Cardio';
+        const card = document.createElement('div');
+        card.className = "bg-gym-surface rounded-xl border border-gym-border overflow-hidden transition shadow-sm hover:border-slate-700";
+
+        let badgeColor = "bg-blue-500/10 text-blue-400 border-blue-500/20";
+        if (exTemplate.type === 'Piramidal') badgeColor = "bg-amber-500/10 text-amber-400 border-amber-500/20";
+        if (exTemplate.type === 'Drop Set') badgeColor = "bg-red-500/10 text-red-400 border-red-500/20";
+
+        const ytQuery = encodeURIComponent(`${exTemplate.name} exercise technique`);
+        const ytUrl = `https://www.youtube.com/results?search_query=${ytQuery}`;
+
+        const bestPR = personalRecords[exTemplate.name];
+        const bestPRTag = bestPR 
+          ? `<span class="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 font-mono">PR: ${bestPR.weight} ${weightUnit} × ${bestPR.reps}</span>`
+          : '';
+
+        const noteVal = sessionData.notes?.[exTemplate.name] || '';
+
+        card.innerHTML = `
+          <!-- Card Header -->
+          <div class="p-3.5 bg-gym-card/60 border-b border-gym-border flex flex-col md:flex-row md:items-center justify-between gap-2">
+            <div>
+              <div class="flex items-center flex-wrap gap-1.5 mb-1">
+                <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border bg-slate-800 text-slate-300 border-slate-700">
+                  ${tp(exTemplate.muscle)}
+                </span>
+                <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${badgeColor}">
+                  ${tp(exTemplate.type)}
+                </span>
+                <span class="text-[10px] font-mono text-slate-400 bg-gym-base px-2 py-0.5 rounded border border-gym-border">
+                  ${t('target')}: ${exTemplate.reps} reps
+                </span>
+                ${bestPRTag}
+              </div>
+              <h3 class="text-sm md:text-base font-extrabold text-white flex items-center gap-2">
+                <span>${exTemplate.name}</span>
+              </h3>
+            </div>
+
+            <!-- Header Actions: Quick Rest Timer & YouTube -->
+            <div class="flex items-center gap-2 self-start md:self-auto">
+              ${exTemplate.rest > 0 ? `
+                <button onclick="startTimer(${exTemplate.rest})" class="px-2.5 py-1 text-xs font-mono font-bold bg-gym-base hover:bg-brand-500/20 text-brand-400 border border-brand-500/30 rounded-lg flex items-center gap-1.5 transition" title="${t('startRest')}">
+                  <i data-lucide="timer" class="w-3.5 h-3.5"></i>
+                  <span>${exTemplate.rest}s</span>
+                </button>
+              ` : ''}
+
+              <a href="${ytUrl}" target="_blank" rel="noopener" class="px-2.5 py-1 text-xs font-bold bg-red-600/10 hover:bg-red-600/20 text-red-400 border border-red-500/30 rounded-lg flex items-center gap-1 transition" title="${t('watchVideo')}">
+                <i data-lucide="play-circle" class="w-3.5 h-3.5 text-red-500"></i>
+                <span class="hidden sm:inline">${t('technique')}</span>
+              </a>
+            </div>
+          </div>
+
+          <!-- Sets Table -->
+          <div class="p-3">
+            ${isCardio ? `
+              <div class="p-4 bg-gym-base/50 rounded-lg border border-gym-border text-center space-y-2">
+                <p class="text-xs text-slate-300">${t('cardioPrescribed')} <strong>${t('cardioDuration')}</strong>.</p>
+                <div class="flex items-center justify-center gap-3">
+                  <input type="checkbox" id="cardioDoneCheck" ${loggedEx.sets[0]?.completed ? 'checked' : ''} onchange="toggleCardioComplete(${exIndex})" class="w-5 h-5 rounded accent-brand-500 cursor-pointer">
+                  <label for="cardioDoneCheck" class="text-xs font-bold text-white cursor-pointer">${t('markCardio')}</label>
+                </div>
+              </div>
+            ` : `
+              <div class="space-y-1.5">
+                <div class="grid grid-cols-12 gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2">
+                  <div class="col-span-2 text-center">Set</div>
+                  <div class="col-span-4">${t('load')} (${weightUnit.toUpperCase()})</div>
+                  <div class="col-span-4">Reps</div>
+                  <div class="col-span-2 text-center">${t('done')}</div>
+                </div>
+
+                <div id="setsContainer_${exIndex}" class="space-y-1.5">
+                  <!-- Populated set rows -->
+                </div>
+
+                <!-- Add Set CTA -->
+                <div class="pt-2 flex items-center justify-between border-t border-gym-border/60 mt-2">
+                  <button onclick="addSet(${exIndex})" class="text-xs font-bold text-brand-400 hover:text-brand-300 flex items-center gap-1 transition">
+                    <i data-lucide="plus" class="w-3.5 h-3.5"></i> ${t('addSet')}
+                  </button>
+
+                  <button onclick="toggleNoteField(${exIndex})" class="text-[11px] text-slate-400 hover:text-white flex items-center gap-1">
+                    <i data-lucide="file-text" class="w-3 h-3"></i> ${noteVal ? t('editNote') : t('addNote')}
+                  </button>
+                </div>
+
+                <!-- Collapsible Note Field -->
+                <div id="noteBox_${exIndex}" class="${noteVal ? 'block' : 'hidden'} pt-2">
+                  <textarea placeholder="${t('notePlaceholder')}" 
+                    onchange="saveExerciseNote('${exTemplate.name}', this.value)"
+                    class="w-full bg-gym-base border border-gym-border rounded-lg p-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-brand-500 resize-none h-14">${noteVal}</textarea>
+                </div>
+              </div>
+            `}
+          </div>
+        `;
+
+        container.appendChild(card);
+        if (!isCardio) {
+          renderSetsRows(exIndex, loggedEx.sets, exTemplate);
+        }
+      });
+    }
+
+    function renderSetsRows(exIndex, setsArray, exTemplate) {
+      const container = document.getElementById(`setsContainer_${exIndex}`);
+      if (!container) return;
+      container.innerHTML = '';
+
+      setsArray.forEach((set, sIdx) => {
+        const row = document.createElement('div');
+        row.className = `grid grid-cols-12 gap-2 items-center p-1.5 rounded-lg border transition ${
+          set.completed 
+            ? 'bg-emerald-950/20 border-emerald-500/40 text-emerald-200' 
+            : 'bg-gym-card border-gym-border text-slate-200'
+        }`;
+
+        row.innerHTML = `
+          <div class="col-span-2 text-center font-mono font-bold text-xs">
+            #${set.setNum || sIdx + 1}
+          </div>
+          <div class="col-span-4">
+            <input type="number" step="0.5" min="0" placeholder="0" 
+              value="${set.weight}" 
+              onchange="updateSetData(${exIndex}, ${sIdx}, 'weight', this.value)"
+              class="w-full bg-gym-base border ${set.completed ? 'border-emerald-500/30' : 'border-gym-border'} rounded px-2 py-1.5 text-xs text-center font-mono font-bold text-white focus:outline-none focus:border-brand-500">
+          </div>
+          <div class="col-span-4">
+            <input type="number" step="1" min="0" placeholder="0" 
+              value="${set.reps}" 
+              onchange="updateSetData(${exIndex}, ${sIdx}, 'reps', this.value)"
+              class="w-full bg-gym-base border ${set.completed ? 'border-emerald-500/30' : 'border-gym-border'} rounded px-2 py-1.5 text-xs text-center font-mono font-bold text-white focus:outline-none focus:border-brand-500">
+          </div>
+          <div class="col-span-2 flex items-center justify-center gap-1.5">
+            <input type="checkbox" ${set.completed ? 'checked' : ''} 
+              onchange="toggleSetComplete(${exIndex}, ${sIdx}, this.checked, ${exTemplate.rest})"
+              class="w-5 h-5 rounded accent-emerald-500 cursor-pointer">
+            ${setsArray.length > 1 ? `
+              <button onclick="removeSet(${exIndex}, ${sIdx})" class="text-slate-500 hover:text-red-400 p-0.5" title="${t('removeSet')}">
+                <i data-lucide="trash" class="w-3.5 h-3.5"></i>
+              </button>
+            ` : ''}
+          </div>
+        `;
+        container.appendChild(row);
+      });
+      lucide.createIcons();
+    }
+
+    /* ================= SET ACTIONS & LOGGING ================= */
+    function updateSetData(exIndex, sIdx, field, value) {
+      const sessionKey = getSessionKey();
+      const exObj = activeSessionLogs[sessionKey]?.exercises[exIndex];
+      if (!exObj || !exObj.sets[sIdx]) return;
+
+      exObj.sets[sIdx][field] = value;
+      saveStateToStorage();
+      checkAndUpdatePR(exObj.name, exObj.sets[sIdx].weight, exObj.sets[sIdx].reps);
+    }
+
+    function toggleSetComplete(exIndex, sIdx, isChecked, restSecs) {
+      const sessionKey = getSessionKey();
+      const exObj = activeSessionLogs[sessionKey]?.exercises[exIndex];
+      if (!exObj || !exObj.sets[sIdx]) return;
+
+      exObj.sets[sIdx].completed = isChecked;
+      saveStateToStorage();
+      updateSessionProgressStats();
+
+      if (isChecked && restSecs && restSecs > 0) {
+        startTimer(restSecs);
+        showToast(t('setDoneToast', { n: sIdx + 1, s: restSecs }));
+      }
+
+      if (isChecked) {
+        checkAndUpdatePR(exObj.name, exObj.sets[sIdx].weight, exObj.sets[sIdx].reps);
+      }
+
+      const dayObj = PROGRAM_DATA[currentWeek].days[currentDay];
+      renderSetsRows(exIndex, exObj.sets, dayObj.exercises[exIndex]);
+    }
+
+    function toggleCardioComplete(exIndex) {
+      const sessionKey = getSessionKey();
+      const exObj = activeSessionLogs[sessionKey]?.exercises[exIndex];
+      if (!exObj) return;
+
+      const isDone = !exObj.sets[0]?.completed;
+      exObj.sets[0] = { setNum: 1, weight: 0, reps: 30, completed: isDone };
+      saveStateToStorage();
+      updateSessionProgressStats();
+      showToast(isDone ? t('cardioDone') : t('cardioUndone'));
+    }
+
+    function addSet(exIndex) {
+      const sessionKey = getSessionKey();
+      const exObj = activeSessionLogs[sessionKey]?.exercises[exIndex];
+      if (!exObj) return;
+
+      const lastSet = exObj.sets[exObj.sets.length - 1];
+      const newWeight = lastSet ? lastSet.weight : '';
+      const newReps = lastSet ? lastSet.reps : '';
+
+      exObj.sets.push({
+        setNum: exObj.sets.length + 1,
+        weight: newWeight,
+        reps: newReps,
+        completed: false
+      });
+      saveStateToStorage();
+
+      const dayObj = PROGRAM_DATA[currentWeek].days[currentDay];
+      renderSetsRows(exIndex, exObj.sets, dayObj.exercises[exIndex]);
+      updateSessionProgressStats();
+    }
+
+    function removeSet(exIndex, sIdx) {
+      const sessionKey = getSessionKey();
+      const exObj = activeSessionLogs[sessionKey]?.exercises[exIndex];
+      if (!exObj || exObj.sets.length <= 1) return;
+
+      exObj.sets.splice(sIdx, 1);
+      exObj.sets.forEach((s, idx) => s.setNum = idx + 1);
+      saveStateToStorage();
+
+      const dayObj = PROGRAM_DATA[currentWeek].days[currentDay];
+      renderSetsRows(exIndex, exObj.sets, dayObj.exercises[exIndex]);
+      updateSessionProgressStats();
+    }
+
+    function toggleNoteField(exIndex) {
+      const box = document.getElementById(`noteBox_${exIndex}`);
+      if (box) box.classList.toggle('hidden');
+    }
+
+    function saveExerciseNote(exName, note) {
+      const sessionKey = getSessionKey();
+      if (!activeSessionLogs[sessionKey].notes) activeSessionLogs[sessionKey].notes = {};
+      activeSessionLogs[sessionKey].notes[exName] = note;
+      saveStateToStorage();
+    }
+
+    function updateSessionProgressStats() {
+      const sessionKey = getSessionKey();
+      const session = activeSessionLogs[sessionKey];
+      if (!session) return;
+
+      let totalSets = 0;
+      let completedSets = 0;
+
+      session.exercises.forEach(ex => {
+        ex.sets.forEach(s => {
+          totalSets++;
+          if (s.completed) completedSets++;
+        });
+      });
+
+      document.getElementById('statsCompletedSets').textContent = `${completedSets} / ${totalSets}`;
+    }
+
+    /* ================= PERSONAL RECORDS (1RM / MAX WEIGHT) ================= */
+    function checkAndUpdatePR(exerciseName, weightStr, repsStr) {
+      const w = parseFloat(weightStr);
+      const r = parseInt(repsStr);
+      if (isNaN(w) || isNaN(r) || w <= 0 || r <= 0) return;
+
+      // Epley Formula for Estimated 1RM = Weight * (1 + Reps/30)
+      const est1RM = Math.round(w * (1 + r / 30) * 10) / 10;
+      const currentPR = personalRecords[exerciseName];
+
+      let isNewPR = false;
+      if (!currentPR || w > currentPR.weight) {
+        personalRecords[exerciseName] = {
+          weight: w,
+          reps: r,
+          est1RM: est1RM,
+          date: new Date().toLocaleDateString(),
+          unit: weightUnit
+        };
+        isNewPR = true;
+      }
+
+      if (isNewPR) {
+        saveStateToStorage();
+        renderPRsTable();
+      }
+    }
+
+    function renderPRsTable() {
+      const tbody = document.getElementById('prTableBody');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      const prEntries = Object.entries(personalRecords);
+      document.getElementById('metricTotalPRs').textContent = prEntries.length;
+
+      if (prEntries.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-slate-500 italic">${t('noPRs')}</td></tr>`;
+        return;
+      }
+
+      prEntries.sort((a, b) => b[1].weight - a[1].weight);
+      prEntries.forEach(([name, data]) => {
+        const row = document.createElement('tr');
+        row.className = "hover:bg-gym-card/50 transition";
+        row.innerHTML = `
+          <td class="py-2.5 px-3 font-bold text-white flex items-center gap-1.5">
+            <i data-lucide="award" class="w-3.5 h-3.5 text-amber-500"></i> ${name}
+          </td>
+          <td class="py-2.5 px-3 font-mono font-black text-brand-400">${data.weight} ${weightUnit.toUpperCase()}</td>
+          <td class="py-2.5 px-3 font-mono text-slate-300">${data.reps} reps</td>
+          <td class="py-2.5 px-3 font-mono font-bold text-emerald-400">~${data.est1RM} ${weightUnit.toUpperCase()}</td>
+          <td class="py-2.5 px-3 text-slate-400">${data.date}</td>
+        `;
+        tbody.appendChild(row);
+      });
+      lucide.createIcons();
+    }
+
+    /* ================= WORKOUT COMPLETION & HISTORY ================= */
+    function finishAndSaveWorkout() {
+      const sessionKey = getSessionKey();
+      const session = activeSessionLogs[sessionKey];
+      if (!session) return;
+
+      let totalSetsCount = 0;
+      let totalCompleted = 0;
+      let totalVolume = 0;
+
+      session.exercises.forEach(ex => {
+        ex.sets.forEach(s => {
+          totalSetsCount++;
+          if (s.completed) {
+            totalCompleted++;
+            const w = parseFloat(s.weight) || 0;
+            const r = parseInt(s.reps) || 0;
+            totalVolume += w * r;
+          }
+        });
+      });
+
+      if (totalCompleted === 0) {
+        showToast(t('markOneSet'));
+        return;
+      }
+
+      const workoutRecord = {
+        id: Date.now(),
+        date: new Date().toLocaleDateString(currentLang === 'en' ? 'en-US' : 'es-ES', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+        week: currentWeek,
+        day: currentDay,
+        focus: PROGRAM_DATA[currentWeek].days[currentDay].title,
+        completedSets: totalCompleted,
+        totalSets: totalSetsCount,
+        volume: totalVolume,
+        unit: weightUnit,
+        data: JSON.parse(JSON.stringify(session))
+      };
+
+      savedWorkoutsHistory.unshift(workoutRecord);
+      saveStateToStorage();
+      renderHistoryList();
+
+      showToast(t('workoutSaved', { volume: totalVolume, unit: weightUnit }));
+      switchMainTab('history');
+    }
+
+    function renderHistoryList() {
+      const listContainer = document.getElementById('historyLogList');
+      if (!listContainer) return;
+      listContainer.innerHTML = '';
+
+      document.getElementById('metricTotalWorkouts').textContent = savedWorkoutsHistory.length;
+
+      let totalSetsAllTime = 0;
+      let totalVolumeAllTime = 0;
+
+      savedWorkoutsHistory.forEach(w => {
+        totalSetsAllTime += w.completedSets;
+        totalVolumeAllTime += w.volume;
+      });
+
+      document.getElementById('metricTotalSets').textContent = totalSetsAllTime;
+      document.getElementById('metricTotalVolume').textContent = `${totalVolumeAllTime.toLocaleString()} ${weightUnit}`;
+
+      if (savedWorkoutsHistory.length === 0) {
+        listContainer.innerHTML = `<div class="p-6 text-center text-slate-500 italic text-xs">${t('noHistory')}</div>`;
+        return;
+      }
+
+      savedWorkoutsHistory.forEach((item, index) => {
+        const itemCard = document.createElement('div');
+        itemCard.className = "bg-gym-card p-3.5 rounded-xl border border-gym-border space-y-2";
+        itemCard.innerHTML = `
+          <div class="flex items-center justify-between text-xs">
+            <span class="font-extrabold text-white flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-brand-500"></span> ${t('week')} ${item.week} • ${t('day')} ${item.day}
+            </span>
+            <span class="text-slate-400 text-[11px]">${item.date}</span>
+          </div>
+
+          <p class="text-xs font-semibold text-slate-300">${tp(item.focus)}</p>
+
+          <div class="flex items-center gap-3 text-[11px] font-mono text-slate-400 bg-gym-base/50 p-2 rounded-lg border border-gym-border">
+            <span>${t('sets')}: <strong class="text-white">${item.completedSets} / ${item.totalSets}</strong></span>
+            <span>•</span>
+            <span>${t('volume')}: <strong class="text-amber-400">${item.volume.toLocaleString()} ${item.unit || 'kg'}</strong></span>
+          </div>
+        `;
+        listContainer.appendChild(itemCard);
+      });
+      lucide.createIcons();
+    }
+
+    function clearHistoryConfirm() {
+      if (savedWorkoutsHistory.length === 0) return;
+      if (confirm(t('confirmClearHistory'))) {
+        savedWorkoutsHistory = [];
+        saveStateToStorage();
+        renderHistoryList();
+        showToast(t('historyCleared'));
+      }
+    }
+
+    function resetCurrentSessionData() {
+      const sessionKey = getSessionKey();
+      delete activeSessionLogs[sessionKey];
+      saveStateToStorage();
+      loadCurrentSession();
+      closeSettingsModal();
+      showToast(t('sessionReset'));
+    }
+
+    /* ================= REST TIMER ENGINE & SOUND ================= */
+    function playBeep(frequency, duration) {
+      try {
+        if (!audioContext) {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (AudioContextClass) audioContext = new AudioContextClass();
+        }
+        if (audioContext && audioContext.state === 'suspended') {
+          audioContext.resume();
+        }
+        if (!audioContext) return;
+
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+
+        osc.type = 'sine';
+        osc.frequency.value = frequency || 880;
+        gain.gain.setValueAtTime(0.15, audioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
+
+        osc.start();
+        osc.stop(audioContext.currentTime + duration);
+      } catch (e) {
+        console.warn("Audio Context not allowed without interaction:", e);
+      }
+    }
+
+    function startTimer(seconds) {
+      stopTimer();
+      timerTotalDuration = seconds;
+      timerRemaining = seconds;
+
+      const bar = document.getElementById('restTimerBar');
+      bar.classList.remove('-translate-y-full', 'opacity-0', 'pointer-events-none');
+      updateTimerUI();
+
+      timerInterval = setInterval(() => {
+        timerRemaining--;
+        updateTimerUI();
+
+        if (timerRemaining <= 3 && timerRemaining > 0) {
+          playBeep(440, 0.1);
+        }
+
+        if (timerRemaining <= 0) {
+          stopTimer();
+          playBeep(880, 0.4);
+          showToast(t('restOver'));
+        }
+      }, 1000);
+    }
+
+    function stopTimer() {
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = null;
+      const bar = document.getElementById('restTimerBar');
+      bar.classList.add('-translate-y-full', 'opacity-0', 'pointer-events-none');
+    }
+
+    function addTimerSeconds(extra) {
+      timerRemaining += extra;
+      timerTotalDuration += extra;
+      updateTimerUI();
+    }
+
+    function updateTimerUI() {
+      const minutes = Math.floor(timerRemaining / 60);
+      const secs = timerRemaining % 60;
+      const text = `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      
+      document.getElementById('timerDisplay').textContent = text;
+      const progressPercent = Math.max(0, (timerRemaining / timerTotalDuration) * 100);
+      document.getElementById('timerProgressBar').style.width = `${progressPercent}%`;
+    }
+
+    /* ================= BACKUP MODAL & JSON IMPORT/EXPORT ================= */
+    function openSettingsModal() {
+      document.getElementById('settingsModal').classList.remove('hidden');
+    }
+
+    function closeSettingsModal() {
+      document.getElementById('settingsModal').classList.add('hidden');
+    }
+
+    function exportDataJSON() {
+      const exportObject = {
+        app: "JavierRosaWorkoutTracker",
+        version: "1.0",
+        exportDate: new Date().toISOString(),
+        unit: weightUnit,
+        currentWeek: currentWeek,
+        currentDay: currentDay,
+        personalRecords: personalRecords,
+        savedWorkoutsHistory: savedWorkoutsHistory,
+        activeSessionLogs: activeSessionLogs
+      };
+
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObject, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `javier_rosa_workout_backup_${new Date().toISOString().slice(0,10)}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      showToast(t('backupDownloaded'));
+    }
+
+    function importDataJSON(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (parsed.personalRecords) personalRecords = parsed.personalRecords;
+          if (parsed.savedWorkoutsHistory) savedWorkoutsHistory = parsed.savedWorkoutsHistory;
+          if (parsed.activeSessionLogs) activeSessionLogs = parsed.activeSessionLogs;
+          if (parsed.unit) weightUnit = parsed.unit;
+
+          saveStateToStorage();
+          updateUnitIndicator();
+          loadCurrentSession();
+          renderPRsTable();
+          renderHistoryList();
+          closeSettingsModal();
+          showToast(t('dataRestored'));
+        } catch (err) {
+          showToast(t('jsonError'));
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    /* ================= CUSTOM TOAST ================= */
+    let toastTimeout = null;
+    function showToast(msg) {
+      const toast = document.getElementById('toastMessage');
+      const text = document.getElementById('toastText');
+      text.textContent = msg;
+      toast.classList.remove('opacity-0', 'pointer-events-none');
+
+      if (toastTimeout) clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.add('opacity-0', 'pointer-events-none');
+      }, 3000);
+    }
+  </script>
+</body>
+</html>
